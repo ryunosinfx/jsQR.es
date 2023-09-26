@@ -336,55 +336,50 @@
 				'use strict';
 
 				Object.defineProperty(exports, '__esModule', { value: true });
-				var BitMatrix_1 = __webpack_require__(0);
-				var REGION_SIZE = 8;
-				var MIN_DYNAMIC_RANGE = 24;
+				const BitMatrix_1 = __webpack_require__(0);
+				const REGION_SIZE = 8;
+				const MIN_DYNAMIC_RANGE = 24;
 				function numBetween(value, min, max) {
 					return value < min ? min : value > max ? max : value;
 				}
 				// Like BitMatrix but accepts arbitry Uint8 values
-				var Matrix = /** @class */ (function () {
-					function Matrix(width, height) {
+				class Matrix {
+					constructor(width, height) {
 						this.width = width;
 						this.data = new Uint8ClampedArray(width * height);
 					}
-					Matrix.prototype.get = function (x, y) {
+					get(x, y) {
 						return this.data[y * this.width + x];
-					};
-					Matrix.prototype.set = function (x, y, value) {
-						this.data[y * this.width + x] = value;
-					};
-					return Matrix;
-				})();
-				function binarize(data, width, height, returnInverted) {
-					if (data.length !== width * height * 4) {
-						throw new Error('Malformed data passed to binarizer.');
 					}
-					// Convert image to greyscale
-					var greyscalePixels = new Matrix(width, height);
-					for (var x = 0; x < width; x++) {
-						for (var y = 0; y < height; y++) {
-							var r = data[(y * width + x) * 4 + 0];
-							var g = data[(y * width + x) * 4 + 1];
-							var b = data[(y * width + x) * 4 + 2];
+					set(x, y, value) {
+						this.data[y * this.width + x] = value;
+					}
+				}
+				function binarize(data, width, height, returnInverted) {
+					if (data.length !== width * height * 4) throw new Error('Malformed data passed to binarizer.');
+					const greyscalePixels = new Matrix(width, height); // Convert image to greyscale
+					for (let x = 0; x < width; x++)
+						for (let y = 0; y < height; y++) {
+							const r = data[(y * width + x) * 4 + 0];
+							const g = data[(y * width + x) * 4 + 1];
+							const b = data[(y * width + x) * 4 + 2];
 							greyscalePixels.set(x, y, 0.2126 * r + 0.7152 * g + 0.0722 * b);
 						}
-					}
-					var horizontalRegionCount = Math.ceil(width / REGION_SIZE);
-					var verticalRegionCount = Math.ceil(height / REGION_SIZE);
-					var blackPoints = new Matrix(horizontalRegionCount, verticalRegionCount);
-					for (var verticalRegion = 0; verticalRegion < verticalRegionCount; verticalRegion++) {
+					const horizontalRegionCount = Math.ceil(width / REGION_SIZE);
+					const verticalRegionCount = Math.ceil(height / REGION_SIZE);
+					const blackPoints = new Matrix(horizontalRegionCount, verticalRegionCount);
+					for (let verticalRegion = 0; verticalRegion < verticalRegionCount; verticalRegion++) {
 						for (
-							var hortizontalRegion = 0;
+							let hortizontalRegion = 0;
 							hortizontalRegion < horizontalRegionCount;
 							hortizontalRegion++
 						) {
-							var sum = 0;
-							var min = Infinity;
-							var max = 0;
-							for (var y = 0; y < REGION_SIZE; y++) {
-								for (var x = 0; x < REGION_SIZE; x++) {
-									var pixelLumosity = greyscalePixels.get(
+							let sum = 0;
+							let min = Infinity;
+							let max = 0;
+							for (let y = 0; y < REGION_SIZE; y++)
+								for (let x = 0; x < REGION_SIZE; x++) {
+									let pixelLumosity = greyscalePixels.get(
 										hortizontalRegion * REGION_SIZE + x,
 										verticalRegion * REGION_SIZE + y
 									);
@@ -392,8 +387,7 @@
 									min = Math.min(min, pixelLumosity);
 									max = Math.max(max, pixelLumosity);
 								}
-							}
-							var average = sum / Math.pow(REGION_SIZE, 2);
+							let average = sum / Math.pow(REGION_SIZE, 2);
 							if (max - min <= MIN_DYNAMIC_RANGE) {
 								// If variation within the block is low, assume this is a block with only light or only
 								// dark pixels. In that case we do not want to use the average, as it would divide this
@@ -408,61 +402,45 @@
 									// background for which reasonable black point estimates were made. The bp estimated at
 									// the boundaries is used for the interior.
 									// The (min < bp) is arbitrary but works better than other heuristics that were tried.
-									var averageNeighborBlackPoint =
+									const averageNeighborBlackPoint =
 										(blackPoints.get(hortizontalRegion, verticalRegion - 1) +
 											2 * blackPoints.get(hortizontalRegion - 1, verticalRegion) +
 											blackPoints.get(hortizontalRegion - 1, verticalRegion - 1)) /
 										4;
-									if (min < averageNeighborBlackPoint) {
-										average = averageNeighborBlackPoint;
-									}
+									if (min < averageNeighborBlackPoint) average = averageNeighborBlackPoint;
 								}
 							}
 							blackPoints.set(hortizontalRegion, verticalRegion, average);
 						}
 					}
-					var binarized = BitMatrix_1.BitMatrix.createEmpty(width, height);
-					var inverted = null;
-					if (returnInverted) {
-						inverted = BitMatrix_1.BitMatrix.createEmpty(width, height);
-					}
-					for (var verticalRegion = 0; verticalRegion < verticalRegionCount; verticalRegion++) {
+					const binarized = BitMatrix_1.BitMatrix.createEmpty(width, height);
+					let inverted = null;
+					if (returnInverted) inverted = BitMatrix_1.BitMatrix.createEmpty(width, height);
+					for (let verticalRegion = 0; verticalRegion < verticalRegionCount; verticalRegion++)
 						for (
-							var hortizontalRegion = 0;
+							let hortizontalRegion = 0;
 							hortizontalRegion < horizontalRegionCount;
 							hortizontalRegion++
 						) {
-							var left = numBetween(hortizontalRegion, 2, horizontalRegionCount - 3);
-							var top_1 = numBetween(verticalRegion, 2, verticalRegionCount - 3);
-							var sum = 0;
-							for (var xRegion = -2; xRegion <= 2; xRegion++) {
-								for (var yRegion = -2; yRegion <= 2; yRegion++) {
+							const left = numBetween(hortizontalRegion, 2, horizontalRegionCount - 3);
+							const top_1 = numBetween(verticalRegion, 2, verticalRegionCount - 3);
+							let sum = 0;
+							for (let xRegion = -2; xRegion <= 2; xRegion++)
+								for (let yRegion = -2; yRegion <= 2; yRegion++)
 									sum += blackPoints.get(left + xRegion, top_1 + yRegion);
-								}
-							}
-							var threshold = sum / 25;
-							for (var xRegion = 0; xRegion < REGION_SIZE; xRegion++) {
-								for (var yRegion = 0; yRegion < REGION_SIZE; yRegion++) {
-									var x = hortizontalRegion * REGION_SIZE + xRegion;
-									var y = verticalRegion * REGION_SIZE + yRegion;
-									var lum = greyscalePixels.get(x, y);
+							const threshold = sum / 25;
+							for (let xRegion = 0; xRegion < REGION_SIZE; xRegion++)
+								for (let yRegion = 0; yRegion < REGION_SIZE; yRegion++) {
+									const x = hortizontalRegion * REGION_SIZE + xRegion;
+									const y = verticalRegion * REGION_SIZE + yRegion;
+									const lum = greyscalePixels.get(x, y);
 									binarized.set(x, y, lum <= threshold);
-									if (returnInverted) {
-										inverted.set(x, y, !(lum <= threshold));
-									}
+									if (returnInverted) inverted.set(x, y, !(lum <= threshold));
 								}
-								/***/
-							}
 						}
-					}
-					if (returnInverted) {
-						return { binarized: binarized, inverted: inverted };
-					}
-					return { binarized: binarized };
+					return returnInverted ? { binarized, inverted } : { binarized };
 				}
 				exports.binarize = binarize;
-
-				/***/
 			},
 			/* 5 */
 			/***/ function (module, exports, __webpack_require__) {
