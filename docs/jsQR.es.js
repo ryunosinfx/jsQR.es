@@ -116,71 +116,53 @@
 			/* 1 */
 			/***/ function (module, exports, __webpack_require__) {
 				'use strict';
-
 				Object.defineProperty(exports, '__esModule', { value: true });
 				var GenericGFPoly_1 = __webpack_require__(2);
 				function addOrSubtractGF(a, b) {
 					return a ^ b; // tslint:disable-line:no-bitwise
 				}
 				exports.addOrSubtractGF = addOrSubtractGF;
-				var GenericGF = /** @class */ (function () {
-					function GenericGF(primitive, size, genBase) {
+				class GenericGF {
+					constructor(primitive, size, genBase) {
 						this.primitive = primitive;
 						this.size = size;
 						this.generatorBase = genBase;
 						this.expTable = new Array(this.size);
 						this.logTable = new Array(this.size);
-						var x = 1;
+						let x = 1;
 						for (var i = 0; i < this.size; i++) {
 							this.expTable[i] = x;
 							x = x * 2;
-							if (x >= this.size) {
-								x = (x ^ this.primitive) & (this.size - 1); // tslint:disable-line:no-bitwise
-							}
+							if (x >= this.size) x = (x ^ this.primitive) & (this.size - 1); // tslint:disable-line:no-bitwise
 						}
-						for (var i = 0; i < this.size - 1; i++) {
-							this.logTable[this.expTable[i]] = i;
-						}
+						for (let i = 0; i < this.size - 1; i++) this.logTable[this.expTable[i]] = i;
 						this.zero = new GenericGFPoly_1.default(this, Uint8ClampedArray.from([0]));
 						this.one = new GenericGFPoly_1.default(this, Uint8ClampedArray.from([1]));
 					}
-					GenericGF.prototype.multiply = function (a, b) {
-						if (a === 0 || b === 0) {
-							return 0;
-						}
+					multiply(a, b) {
+						if (a === 0 || b === 0) return 0;
 						return this.expTable[(this.logTable[a] + this.logTable[b]) % (this.size - 1)];
-					};
-					GenericGF.prototype.inverse = function (a) {
-						if (a === 0) {
-							throw new Error("Can't invert 0");
-						}
+					}
+					inverse(a) {
+						if (a === 0) throw new Error("Can't invert 0");
 						return this.expTable[this.size - this.logTable[a] - 1];
-					};
-					GenericGF.prototype.buildMonomial = function (degree, coefficient) {
-						if (degree < 0) {
-							throw new Error('Invalid monomial degree less than 0');
-						}
-						if (coefficient === 0) {
-							return this.zero;
-						}
-						var coefficients = new Uint8ClampedArray(degree + 1);
+					}
+					buildMonomial(degree, coefficient) {
+						if (degree < 0) throw new Error('Invalid monomial degree less than 0');
+						if (coefficient === 0) return this.zero;
+						const coefficients = new Uint8ClampedArray(degree + 1);
 						coefficients[0] = coefficient;
 						return new GenericGFPoly_1.default(this, coefficients);
-					};
-					GenericGF.prototype.log = function (a) {
-						if (a === 0) {
-							throw new Error("Can't take log(0)");
-						}
+					}
+					log(a) {
+						if (a === 0) throw new Error("Can't take log(0)");
 						return this.logTable[a];
-					};
-					GenericGF.prototype.exp = function (a) {
+					}
+					exp(a) {
 						return this.expTable[a];
-					};
-					return GenericGF;
-				})();
+					}
+				}
 				exports.default = GenericGF;
-
-				/***/
 			},
 			/* 2 */
 			/***/ function (module, exports, __webpack_require__) {
@@ -518,6 +500,7 @@
 										inverted.set(x, y, !(lum <= threshold));
 									}
 								}
+								/***/
 							}
 						}
 					}
