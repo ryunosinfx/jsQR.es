@@ -89,7 +89,6 @@
 			/* 0 */
 			/***/ function (module, exports, __webpack_require__) {
 				'use strict';
-
 				Object.defineProperty(exports, '__esModule', { value: true });
 				class BitMatrix {
 					constructor(data, width) {
@@ -936,20 +935,19 @@
 					}
 					// If the number of digits aren't a multiple of 3, the remaining digits are special cased.
 					if (length === 2) {
-						var num = stream.readBits(7);
+						const num = stream.readBits(7);
 						if (num >= 100) throw new Error('Invalid numeric value above 99');
-
-						var a = Math.floor(num / 10);
-						var b = num % 10;
+						const a = Math.floor(num / 10);
+						const b = num % 10;
 						bytes.push(48 + a, 48 + b);
 						text += a.toString() + b.toString();
 					} else if (length === 1) {
-						var num = stream.readBits(4);
+						const num = stream.readBits(4);
 						if (num >= 10) throw new Error('Invalid numeric value above 9');
 						bytes.push(48 + num);
 						text += num.toString();
 					}
-					return { bytes: bytes, text: text };
+					return { bytes, text };
 				}
 				var AlphanumericCharacterCodes = [
 					'0',
