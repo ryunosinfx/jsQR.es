@@ -117,7 +117,7 @@
 			/***/ function (module, exports, __webpack_require__) {
 				'use strict';
 				Object.defineProperty(exports, '__esModule', { value: true });
-				var GenericGFPoly_1 = __webpack_require__(2);
+				const GenericGFPoly_1 = __webpack_require__(2);
 				function addOrSubtractGF(a, b) {
 					return a ^ b; // tslint:disable-line:no-bitwise
 				}
@@ -167,144 +167,106 @@
 			/* 2 */
 			/***/ function (module, exports, __webpack_require__) {
 				'use strict';
-
 				Object.defineProperty(exports, '__esModule', { value: true });
-				var GenericGF_1 = __webpack_require__(1);
-				var GenericGFPoly = /** @class */ (function () {
-					function GenericGFPoly(field, coefficients) {
-						if (coefficients.length === 0) {
-							throw new Error('No coefficients.');
-						}
+				const GenericGF_1 = __webpack_require__(1);
+				class GenericGFPoly {
+					constructor(field, coefficients) {
+						if (coefficients.length === 0) throw new Error('No coefficients.');
 						this.field = field;
-						var coefficientsLength = coefficients.length;
+						const coefficientsLength = coefficients.length;
 						if (coefficientsLength > 1 && coefficients[0] === 0) {
-							// Leading term must be non-zero for anything except the constant polynomial "0"
-							var firstNonZero = 1;
-							while (firstNonZero < coefficientsLength && coefficients[firstNonZero] === 0) {
+							let firstNonZero = 1; // Leading term must be non-zero for anything except the constant polynomial "0"
+							while (firstNonZero < coefficientsLength && coefficients[firstNonZero] === 0)
 								firstNonZero++;
-							}
-							if (firstNonZero === coefficientsLength) {
-								this.coefficients = field.zero.coefficients;
-							} else {
+							if (firstNonZero === coefficientsLength) this.coefficients = field.zero.coefficients;
+							else {
 								this.coefficients = new Uint8ClampedArray(coefficientsLength - firstNonZero);
-								for (var i = 0; i < this.coefficients.length; i++) {
+								for (let i = 0; i < this.coefficients.length; i++)
 									this.coefficients[i] = coefficients[firstNonZero + i];
-								}
 							}
-						} else {
-							this.coefficients = coefficients;
-						}
+						} else this.coefficients = coefficients;
 					}
-					GenericGFPoly.prototype.degree = function () {
+					degree() {
 						return this.coefficients.length - 1;
-					};
-					GenericGFPoly.prototype.isZero = function () {
+					}
+					isZero() {
 						return this.coefficients[0] === 0;
-					};
-					GenericGFPoly.prototype.getCoefficient = function (degree) {
+					}
+					getCoefficient(degree) {
 						return this.coefficients[this.coefficients.length - 1 - degree];
-					};
-					GenericGFPoly.prototype.addOrSubtract = function (other) {
-						var _a;
-						if (this.isZero()) {
-							return other;
-						}
-						if (other.isZero()) {
-							return this;
-						}
-						var smallerCoefficients = this.coefficients;
-						var largerCoefficients = other.coefficients;
+					}
+					addOrSubtract(other) {
+						let _a;
+						if (this.isZero()) return other;
+						if (other.isZero()) return this;
+						const smallerCoefficients = this.coefficients;
+						const largerCoefficients = other.coefficients;
 						if (smallerCoefficients.length > largerCoefficients.length) {
 							(_a = [largerCoefficients, smallerCoefficients]),
 								(smallerCoefficients = _a[0]),
 								(largerCoefficients = _a[1]);
 						}
-						var sumDiff = new Uint8ClampedArray(largerCoefficients.length);
-						var lengthDiff = largerCoefficients.length - smallerCoefficients.length;
-						for (var i = 0; i < lengthDiff; i++) {
-							sumDiff[i] = largerCoefficients[i];
-						}
-						for (var i = lengthDiff; i < largerCoefficients.length; i++) {
+						const sumDiff = new Uint8ClampedArray(largerCoefficients.length);
+						const lengthDiff = largerCoefficients.length - smallerCoefficients.length;
+						for (let i = 0; i < lengthDiff; i++) sumDiff[i] = largerCoefficients[i];
+						for (let i = lengthDiff; i < largerCoefficients.length; i++)
 							sumDiff[i] = GenericGF_1.addOrSubtractGF(
 								smallerCoefficients[i - lengthDiff],
 								largerCoefficients[i]
 							);
-						}
 						return new GenericGFPoly(this.field, sumDiff);
-					};
-					GenericGFPoly.prototype.multiply = function (scalar) {
-						if (scalar === 0) {
-							return this.field.zero;
-						}
-						if (scalar === 1) {
-							return this;
-						}
-						var size = this.coefficients.length;
-						var product = new Uint8ClampedArray(size);
-						for (var i = 0; i < size; i++) {
-							product[i] = this.field.multiply(this.coefficients[i], scalar);
-						}
+					}
+					multiply(scalar) {
+						if (scalar === 0) return this.field.zero;
+						if (scalar === 1) return this;
+						const size = this.coefficients.length;
+						const product = new Uint8ClampedArray(size);
+						for (let i = 0; i < size; i++) product[i] = this.field.multiply(this.coefficients[i], scalar);
 						return new GenericGFPoly(this.field, product);
-					};
-					GenericGFPoly.prototype.multiplyPoly = function (other) {
-						if (this.isZero() || other.isZero()) {
-							return this.field.zero;
-						}
-						var aCoefficients = this.coefficients;
-						var aLength = aCoefficients.length;
-						var bCoefficients = other.coefficients;
-						var bLength = bCoefficients.length;
-						var product = new Uint8ClampedArray(aLength + bLength - 1);
-						for (var i = 0; i < aLength; i++) {
-							var aCoeff = aCoefficients[i];
-							for (var j = 0; j < bLength; j++) {
+					}
+					multiplyPoly(other) {
+						if (this.isZero() || other.isZero()) return this.field.zero;
+						const aCoefficients = this.coefficients;
+						const aLength = aCoefficients.length;
+						const bCoefficients = other.coefficients;
+						const bLength = bCoefficients.length;
+						const product = new Uint8ClampedArray(aLength + bLength - 1);
+						for (let i = 0; i < aLength; i++) {
+							const aCoeff = aCoefficients[i];
+							for (let j = 0; j < bLength; j++)
 								product[i + j] = GenericGF_1.addOrSubtractGF(
 									product[i + j],
 									this.field.multiply(aCoeff, bCoefficients[j])
 								);
-							}
 						}
 						return new GenericGFPoly(this.field, product);
-					};
-					GenericGFPoly.prototype.multiplyByMonomial = function (degree, coefficient) {
-						if (degree < 0) {
-							throw new Error('Invalid degree less than 0');
-						}
-						if (coefficient === 0) {
-							return this.field.zero;
-						}
-						var size = this.coefficients.length;
-						var product = new Uint8ClampedArray(size + degree);
-						for (var i = 0; i < size; i++) {
+					}
+					multiplyByMonomial(degree, coefficient) {
+						if (degree < 0) throw new Error('Invalid degree less than 0');
+						if (coefficient === 0) return this.field.zero;
+						const size = this.coefficients.length;
+						const product = new Uint8ClampedArray(size + degree);
+						for (let i = 0; i < size; i++)
 							product[i] = this.field.multiply(this.coefficients[i], coefficient);
-						}
 						return new GenericGFPoly(this.field, product);
-					};
-					GenericGFPoly.prototype.evaluateAt = function (a) {
-						var result = 0;
-						if (a === 0) {
-							// Just return the x^0 coefficient
-							return this.getCoefficient(0);
-						}
-						var size = this.coefficients.length;
+					}
+					evaluateAt(a) {
+						let result = 0;
+						if (a === 0) return this.getCoefficient(0); // Just return the x^0 coefficient
+						const size = this.coefficients.length;
 						if (a === 1) {
-							// Just the sum of the coefficients
 							this.coefficients.forEach(function (coefficient) {
 								result = GenericGF_1.addOrSubtractGF(result, coefficient);
-							});
+							}); // Just the sum of the coefficients
 							return result;
 						}
 						result = this.coefficients[0];
-						for (var i = 1; i < size; i++) {
+						for (let i = 1; i < size; i++)
 							result = GenericGF_1.addOrSubtractGF(this.field.multiply(a, result), this.coefficients[i]);
-						}
 						return result;
-					};
-					return GenericGFPoly;
-				})();
+					}
+				}
 				exports.default = GenericGFPoly;
-
-				/***/
 			},
 			/* 3 */
 			/***/ function (module, exports, __webpack_require__) {
