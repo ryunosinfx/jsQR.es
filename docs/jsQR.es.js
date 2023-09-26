@@ -447,357 +447,294 @@
 				'use strict';
 
 				Object.defineProperty(exports, '__esModule', { value: true });
-				var BitMatrix_1 = __webpack_require__(0);
-				var decodeData_1 = __webpack_require__(6);
-				var reedsolomon_1 = __webpack_require__(9);
-				var version_1 = __webpack_require__(10);
-				// tslint:disable:no-bitwise
-				function numBitsDiffering(x, y) {
-					var z = x ^ y;
-					var bitCount = 0;
-					while (z) {
-						bitCount++;
-						z &= z - 1;
+				const BitMatrix_1 = __webpack_require__(0);
+				const decodeData_1 = __webpack_require__(6);
+				const reedsolomon_1 = __webpack_require__(9);
+				const version_1 = __webpack_require__(10);
+				class U {
+					// tslint:disable:no-bitwise
+					static numBitsDiffering(x, y) {
+						let z = x ^ y;
+						let bitCount = 0;
+						while (z) {
+							bitCount++;
+							z &= z - 1;
+						}
+						return bitCount;
 					}
-					return bitCount;
-				}
-				function pushBit(bit, byte) {
-					return (byte << 1) | bit;
-				}
-				// tslint:enable:no-bitwise
-				var FORMAT_INFO_TABLE = [
-					{ bits: 0x5412, formatInfo: { errorCorrectionLevel: 1, dataMask: 0 } },
-					{ bits: 0x5125, formatInfo: { errorCorrectionLevel: 1, dataMask: 1 } },
-					{ bits: 0x5e7c, formatInfo: { errorCorrectionLevel: 1, dataMask: 2 } },
-					{ bits: 0x5b4b, formatInfo: { errorCorrectionLevel: 1, dataMask: 3 } },
-					{ bits: 0x45f9, formatInfo: { errorCorrectionLevel: 1, dataMask: 4 } },
-					{ bits: 0x40ce, formatInfo: { errorCorrectionLevel: 1, dataMask: 5 } },
-					{ bits: 0x4f97, formatInfo: { errorCorrectionLevel: 1, dataMask: 6 } },
-					{ bits: 0x4aa0, formatInfo: { errorCorrectionLevel: 1, dataMask: 7 } },
-					{ bits: 0x77c4, formatInfo: { errorCorrectionLevel: 0, dataMask: 0 } },
-					{ bits: 0x72f3, formatInfo: { errorCorrectionLevel: 0, dataMask: 1 } },
-					{ bits: 0x7daa, formatInfo: { errorCorrectionLevel: 0, dataMask: 2 } },
-					{ bits: 0x789d, formatInfo: { errorCorrectionLevel: 0, dataMask: 3 } },
-					{ bits: 0x662f, formatInfo: { errorCorrectionLevel: 0, dataMask: 4 } },
-					{ bits: 0x6318, formatInfo: { errorCorrectionLevel: 0, dataMask: 5 } },
-					{ bits: 0x6c41, formatInfo: { errorCorrectionLevel: 0, dataMask: 6 } },
-					{ bits: 0x6976, formatInfo: { errorCorrectionLevel: 0, dataMask: 7 } },
-					{ bits: 0x1689, formatInfo: { errorCorrectionLevel: 3, dataMask: 0 } },
-					{ bits: 0x13be, formatInfo: { errorCorrectionLevel: 3, dataMask: 1 } },
-					{ bits: 0x1ce7, formatInfo: { errorCorrectionLevel: 3, dataMask: 2 } },
-					{ bits: 0x19d0, formatInfo: { errorCorrectionLevel: 3, dataMask: 3 } },
-					{ bits: 0x0762, formatInfo: { errorCorrectionLevel: 3, dataMask: 4 } },
-					{ bits: 0x0255, formatInfo: { errorCorrectionLevel: 3, dataMask: 5 } },
-					{ bits: 0x0d0c, formatInfo: { errorCorrectionLevel: 3, dataMask: 6 } },
-					{ bits: 0x083b, formatInfo: { errorCorrectionLevel: 3, dataMask: 7 } },
-					{ bits: 0x355f, formatInfo: { errorCorrectionLevel: 2, dataMask: 0 } },
-					{ bits: 0x3068, formatInfo: { errorCorrectionLevel: 2, dataMask: 1 } },
-					{ bits: 0x3f31, formatInfo: { errorCorrectionLevel: 2, dataMask: 2 } },
-					{ bits: 0x3a06, formatInfo: { errorCorrectionLevel: 2, dataMask: 3 } },
-					{ bits: 0x24b4, formatInfo: { errorCorrectionLevel: 2, dataMask: 4 } },
-					{ bits: 0x2183, formatInfo: { errorCorrectionLevel: 2, dataMask: 5 } },
-					{ bits: 0x2eda, formatInfo: { errorCorrectionLevel: 2, dataMask: 6 } },
-					{ bits: 0x2bed, formatInfo: { errorCorrectionLevel: 2, dataMask: 7 } },
-				];
-				var DATA_MASKS = [
-					function (p) {
-						return (p.y + p.x) % 2 === 0;
-					},
-					function (p) {
-						return p.y % 2 === 0;
-					},
-					function (p) {
-						return p.x % 3 === 0;
-					},
-					function (p) {
-						return (p.y + p.x) % 3 === 0;
-					},
-					function (p) {
-						return (Math.floor(p.y / 2) + Math.floor(p.x / 3)) % 2 === 0;
-					},
-					function (p) {
-						return ((p.x * p.y) % 2) + ((p.x * p.y) % 3) === 0;
-					},
-					function (p) {
-						return (((p.y * p.x) % 2) + ((p.y * p.x) % 3)) % 2 === 0;
-					},
-					function (p) {
-						return (((p.y + p.x) % 2) + ((p.y * p.x) % 3)) % 2 === 0;
-					},
-				];
-				function buildFunctionPatternMask(version) {
-					var dimension = 17 + 4 * version.versionNumber;
-					var matrix = BitMatrix_1.BitMatrix.createEmpty(dimension, dimension);
-					matrix.setRegion(0, 0, 9, 9, true); // Top left finder pattern + separator + format
-					matrix.setRegion(dimension - 8, 0, 8, 9, true); // Top right finder pattern + separator + format
-					matrix.setRegion(0, dimension - 8, 9, 8, true); // Bottom left finder pattern + separator + format
-					// Alignment patterns
-					for (var _i = 0, _a = version.alignmentPatternCenters; _i < _a.length; _i++) {
-						var x = _a[_i];
-						for (var _b = 0, _c = version.alignmentPatternCenters; _b < _c.length; _b++) {
-							var y = _c[_b];
-							if (
-								!(
-									(x === 6 && y === 6) ||
-									(x === 6 && y === dimension - 7) ||
-									(x === dimension - 7 && y === 6)
+					static pushBit(bit, byte) {
+						return (byte << 1) | bit;
+					}
+					// tslint:enable:no-bitwise
+					static FORMAT_INFO_TABLE = [
+						{ bits: 0x5412, formatInfo: { errorCorrectionLevel: 1, dataMask: 0 } },
+						{ bits: 0x5125, formatInfo: { errorCorrectionLevel: 1, dataMask: 1 } },
+						{ bits: 0x5e7c, formatInfo: { errorCorrectionLevel: 1, dataMask: 2 } },
+						{ bits: 0x5b4b, formatInfo: { errorCorrectionLevel: 1, dataMask: 3 } },
+						{ bits: 0x45f9, formatInfo: { errorCorrectionLevel: 1, dataMask: 4 } },
+						{ bits: 0x40ce, formatInfo: { errorCorrectionLevel: 1, dataMask: 5 } },
+						{ bits: 0x4f97, formatInfo: { errorCorrectionLevel: 1, dataMask: 6 } },
+						{ bits: 0x4aa0, formatInfo: { errorCorrectionLevel: 1, dataMask: 7 } },
+						{ bits: 0x77c4, formatInfo: { errorCorrectionLevel: 0, dataMask: 0 } },
+						{ bits: 0x72f3, formatInfo: { errorCorrectionLevel: 0, dataMask: 1 } },
+						{ bits: 0x7daa, formatInfo: { errorCorrectionLevel: 0, dataMask: 2 } },
+						{ bits: 0x789d, formatInfo: { errorCorrectionLevel: 0, dataMask: 3 } },
+						{ bits: 0x662f, formatInfo: { errorCorrectionLevel: 0, dataMask: 4 } },
+						{ bits: 0x6318, formatInfo: { errorCorrectionLevel: 0, dataMask: 5 } },
+						{ bits: 0x6c41, formatInfo: { errorCorrectionLevel: 0, dataMask: 6 } },
+						{ bits: 0x6976, formatInfo: { errorCorrectionLevel: 0, dataMask: 7 } },
+						{ bits: 0x1689, formatInfo: { errorCorrectionLevel: 3, dataMask: 0 } },
+						{ bits: 0x13be, formatInfo: { errorCorrectionLevel: 3, dataMask: 1 } },
+						{ bits: 0x1ce7, formatInfo: { errorCorrectionLevel: 3, dataMask: 2 } },
+						{ bits: 0x19d0, formatInfo: { errorCorrectionLevel: 3, dataMask: 3 } },
+						{ bits: 0x0762, formatInfo: { errorCorrectionLevel: 3, dataMask: 4 } },
+						{ bits: 0x0255, formatInfo: { errorCorrectionLevel: 3, dataMask: 5 } },
+						{ bits: 0x0d0c, formatInfo: { errorCorrectionLevel: 3, dataMask: 6 } },
+						{ bits: 0x083b, formatInfo: { errorCorrectionLevel: 3, dataMask: 7 } },
+						{ bits: 0x355f, formatInfo: { errorCorrectionLevel: 2, dataMask: 0 } },
+						{ bits: 0x3068, formatInfo: { errorCorrectionLevel: 2, dataMask: 1 } },
+						{ bits: 0x3f31, formatInfo: { errorCorrectionLevel: 2, dataMask: 2 } },
+						{ bits: 0x3a06, formatInfo: { errorCorrectionLevel: 2, dataMask: 3 } },
+						{ bits: 0x24b4, formatInfo: { errorCorrectionLevel: 2, dataMask: 4 } },
+						{ bits: 0x2183, formatInfo: { errorCorrectionLevel: 2, dataMask: 5 } },
+						{ bits: 0x2eda, formatInfo: { errorCorrectionLevel: 2, dataMask: 6 } },
+						{ bits: 0x2bed, formatInfo: { errorCorrectionLevel: 2, dataMask: 7 } },
+					];
+					static DATA_MASKS = [
+						function (p) {
+							return (p.y + p.x) % 2 === 0;
+						},
+						function (p) {
+							return p.y % 2 === 0;
+						},
+						function (p) {
+							return p.x % 3 === 0;
+						},
+						function (p) {
+							return (p.y + p.x) % 3 === 0;
+						},
+						function (p) {
+							return (Math.floor(p.y / 2) + Math.floor(p.x / 3)) % 2 === 0;
+						},
+						function (p) {
+							return ((p.x * p.y) % 2) + ((p.x * p.y) % 3) === 0;
+						},
+						function (p) {
+							return (((p.y * p.x) % 2) + ((p.y * p.x) % 3)) % 2 === 0;
+						},
+						function (p) {
+							return (((p.y + p.x) % 2) + ((p.y * p.x) % 3)) % 2 === 0;
+						},
+					];
+					static buildFunctionPatternMask(version) {
+						const dimension = 17 + 4 * version.versionNumber;
+						const matrix = BitMatrix_1.BitMatrix.createEmpty(dimension, dimension);
+						matrix.setRegion(0, 0, 9, 9, true); // Top left finder pattern + separator + format
+						matrix.setRegion(dimension - 8, 0, 8, 9, true); // Top right finder pattern + separator + format
+						matrix.setRegion(0, dimension - 8, 9, 8, true); // Bottom left finder pattern + separator + format
+						// Alignment patterns
+						for (let _i = 0, _a = version.alignmentPatternCenters; _i < _a.length; _i++) {
+							const x = _a[_i];
+							for (let _b = 0, _c = version.alignmentPatternCenters; _b < _c.length; _b++) {
+								const y = _c[_b];
+								if (
+									!(
+										(x === 6 && y === 6) ||
+										(x === 6 && y === dimension - 7) ||
+										(x === dimension - 7 && y === 6)
+									)
 								)
-							) {
-								matrix.setRegion(x - 2, y - 2, 5, 5, true);
+									matrix.setRegion(x - 2, y - 2, 5, 5, true);
 							}
 						}
-					}
-					matrix.setRegion(6, 9, 1, dimension - 17, true); // Vertical timing pattern
-					matrix.setRegion(9, 6, dimension - 17, 1, true); // Horizontal timing pattern
-					if (version.versionNumber > 6) {
-						matrix.setRegion(dimension - 11, 0, 3, 6, true); // Version info, top right
-						matrix.setRegion(0, dimension - 11, 6, 3, true); // Version info, bottom left
-					}
-					return matrix;
-				}
-				function readCodewords(matrix, version, formatInfo) {
-					var dataMask = DATA_MASKS[formatInfo.dataMask];
-					var dimension = matrix.height;
-					var functionPatternMask = buildFunctionPatternMask(version);
-					var codewords = [];
-					var currentByte = 0;
-					var bitsRead = 0;
-					// Read columns in pairs, from right to left
-					var readingUp = true;
-					for (var columnIndex = dimension - 1; columnIndex > 0; columnIndex -= 2) {
-						if (columnIndex === 6) {
-							// Skip whole column with vertical alignment pattern;
-							columnIndex--;
+						matrix.setRegion(6, 9, 1, dimension - 17, true); // Vertical timing pattern
+						matrix.setRegion(9, 6, dimension - 17, 1, true); // Horizontal timing pattern
+						if (version.versionNumber > 6) {
+							matrix.setRegion(dimension - 11, 0, 3, 6, true); // Version info, top right
+							matrix.setRegion(0, dimension - 11, 6, 3, true); // Version info, bottom left
 						}
-						for (var i = 0; i < dimension; i++) {
-							var y = readingUp ? dimension - 1 - i : i;
-							for (var columnOffset = 0; columnOffset < 2; columnOffset++) {
-								var x = columnIndex - columnOffset;
-								if (!functionPatternMask.get(x, y)) {
-									bitsRead++;
-									var bit = matrix.get(x, y);
-									if (dataMask({ y: y, x: x })) {
-										bit = !bit;
-									}
-									currentByte = pushBit(bit, currentByte);
-									if (bitsRead === 8) {
-										// Whole bytes
-										codewords.push(currentByte);
-										bitsRead = 0;
-										currentByte = 0;
+						return matrix;
+					}
+					static readCodewords(matrix, version, formatInfo) {
+						const dataMask = DATA_MASKS[formatInfo.dataMask];
+						const dimension = matrix.height;
+						const functionPatternMask = U.buildFunctionPatternMask(version);
+						const codewords = [];
+						let currentByte = 0;
+						let bitsRead = 0;
+						let readingUp = true; // Read columns in pairs, from right to left
+						for (let columnIndex = dimension - 1; columnIndex > 0; columnIndex -= 2) {
+							if (columnIndex === 6) columnIndex--; // Skip whole column with vertical alignment pattern;
+							for (let i = 0; i < dimension; i++) {
+								const y = readingUp ? dimension - 1 - i : i;
+								for (let columnOffset = 0; columnOffset < 2; columnOffset++) {
+									const x = columnIndex - columnOffset;
+									if (!functionPatternMask.get(x, y)) {
+										bitsRead++;
+										let bit = matrix.get(x, y);
+										if (dataMask({ y: y, x: x })) bit = !bit;
+										currentByte = pushBit(bit, currentByte);
+										if (bitsRead === 8) {
+											codewords.push(currentByte); // Whole bytes
+											bitsRead = 0;
+											currentByte = 0;
+										}
 									}
 								}
 							}
+							readingUp = !readingUp;
 						}
-						readingUp = !readingUp;
+						return codewords;
 					}
-					return codewords;
-				}
-				function readVersion(matrix) {
-					var dimension = matrix.height;
-					var provisionalVersion = Math.floor((dimension - 17) / 4);
-					if (provisionalVersion <= 6) {
-						// 6 and under dont have version info in the QR code
-						return version_1.VERSIONS[provisionalVersion - 1];
-					}
-					var topRightVersionBits = 0;
-					for (var y = 5; y >= 0; y--) {
-						for (var x = dimension - 9; x >= dimension - 11; x--) {
-							topRightVersionBits = pushBit(matrix.get(x, y), topRightVersionBits);
-						}
-					}
-					var bottomLeftVersionBits = 0;
-					for (var x = 5; x >= 0; x--) {
-						for (var y = dimension - 9; y >= dimension - 11; y--) {
-							bottomLeftVersionBits = pushBit(matrix.get(x, y), bottomLeftVersionBits);
-						}
-					}
-					var bestDifference = Infinity;
-					var bestVersion;
-					for (var _i = 0, VERSIONS_1 = version_1.VERSIONS; _i < VERSIONS_1.length; _i++) {
-						var version = VERSIONS_1[_i];
-						if (version.infoBits === topRightVersionBits || version.infoBits === bottomLeftVersionBits) {
-							return version;
-						}
-						var difference = numBitsDiffering(topRightVersionBits, version.infoBits);
-						if (difference < bestDifference) {
-							bestVersion = version;
-							bestDifference = difference;
-						}
-						difference = numBitsDiffering(bottomLeftVersionBits, version.infoBits);
-						if (difference < bestDifference) {
-							bestVersion = version;
-							bestDifference = difference;
-						}
-					}
-					// We can tolerate up to 3 bits of error since no two version info codewords will
-					// differ in less than 8 bits.
-					if (bestDifference <= 3) {
-						return bestVersion;
-					}
-				}
-				function readFormatInformation(matrix) {
-					var topLeftFormatInfoBits = 0;
-					for (var x = 0; x <= 8; x++) {
-						if (x !== 6) {
-							// Skip timing pattern bit
-							topLeftFormatInfoBits = pushBit(matrix.get(x, 8), topLeftFormatInfoBits);
-						}
-					}
-					for (var y = 7; y >= 0; y--) {
-						if (y !== 6) {
-							// Skip timing pattern bit
-							topLeftFormatInfoBits = pushBit(matrix.get(8, y), topLeftFormatInfoBits);
-						}
-					}
-					var dimension = matrix.height;
-					var topRightBottomRightFormatInfoBits = 0;
-					for (var y = dimension - 1; y >= dimension - 7; y--) {
-						// bottom left
-						topRightBottomRightFormatInfoBits = pushBit(
-							matrix.get(8, y),
-							topRightBottomRightFormatInfoBits
-						);
-					}
-					for (var x = dimension - 8; x < dimension; x++) {
-						// top right
-						topRightBottomRightFormatInfoBits = pushBit(
-							matrix.get(x, 8),
-							topRightBottomRightFormatInfoBits
-						);
-					}
-					var bestDifference = Infinity;
-					var bestFormatInfo = null;
-					for (var _i = 0, FORMAT_INFO_TABLE_1 = FORMAT_INFO_TABLE; _i < FORMAT_INFO_TABLE_1.length; _i++) {
-						var _a = FORMAT_INFO_TABLE_1[_i],
-							bits = _a.bits,
-							formatInfo = _a.formatInfo;
-						if (bits === topLeftFormatInfoBits || bits === topRightBottomRightFormatInfoBits) {
-							return formatInfo;
-						}
-						var difference = numBitsDiffering(topLeftFormatInfoBits, bits);
-						if (difference < bestDifference) {
-							bestFormatInfo = formatInfo;
-							bestDifference = difference;
-						}
-						if (topLeftFormatInfoBits !== topRightBottomRightFormatInfoBits) {
-							// also try the other option
-							difference = numBitsDiffering(topRightBottomRightFormatInfoBits, bits);
-							if (difference < bestDifference) {
-								bestFormatInfo = formatInfo;
-								bestDifference = difference;
+					static readVersion(matrix) {
+						const dimension = matrix.height;
+						const provisionalVersion = Math.floor((dimension - 17) / 4);
+						if (provisionalVersion <= 6) return version_1.VERSIONS[provisionalVersion - 1]; // 6 and under dont have version info in the QR code
+						let topRightVersionBits = 0;
+						for (let y = 5; y >= 0; y--)
+							for (let x = dimension - 9; x >= dimension - 11; x--)
+								topRightVersionBits = U.pushBit(matrix.get(x, y), topRightVersionBits);
+						let bottomLeftVersionBits = 0;
+						for (let x = 5; x >= 0; x--)
+							for (let y = dimension - 9; y >= dimension - 11; y--)
+								bottomLeftVersionBits = U.pushBit(matrix.get(x, y), bottomLeftVersionBits);
+						let bestDifference = Infinity;
+						let bestVersion;
+						for (let _i = 0, VERSIONS_1 = version_1.VERSIONS; _i < VERSIONS_1.length; _i++) {
+							const version = VERSIONS_1[_i];
+							if (version.infoBits === topRightVersionBits || version.infoBits === bottomLeftVersionBits)
+								return version;
+							const difference1 = U.numBitsDiffering(topRightVersionBits, version.infoBits);
+							if (difference1 < bestDifference) {
+								bestVersion = version;
+								bestDifference = difference1;
+							}
+							const difference2 = U.numBitsDiffering(bottomLeftVersionBits, version.infoBits);
+							if (difference2 < bestDifference) {
+								bestVersion = version;
+								bestDifference = difference2;
 							}
 						}
+						// We can tolerate up to 3 bits of error since no two version info codewords will
+						// differ in less than 8 bits.
+						if (bestDifference <= 3) return bestVersion;
 					}
-					// Hamming distance of the 32 masked codes is 7, by construction, so <= 3 bits differing means we found a match
-					if (bestDifference <= 3) {
-						return bestFormatInfo;
-					}
-					return null;
-				}
-				function getDataBlocks(codewords, version, ecLevel) {
-					var ecInfo = version.errorCorrectionLevels[ecLevel];
-					var dataBlocks = [];
-					var totalCodewords = 0;
-					ecInfo.ecBlocks.forEach(function (block) {
-						for (var i = 0; i < block.numBlocks; i++) {
-							dataBlocks.push({ numDataCodewords: block.dataCodewordsPerBlock, codewords: [] });
-							totalCodewords += block.dataCodewordsPerBlock + ecInfo.ecCodewordsPerBlock;
+					static readFormatInformation(matrix) {
+						let topLeftFormatInfoBits = 0;
+						for (let x = 0; x <= 8; x++)
+							if (x !== 6) topLeftFormatInfoBits = U.pushBit(matrix.get(x, 8), topLeftFormatInfoBits); // Skip timing pattern bit
+						for (let y = 7; y >= 0; y--)
+							if (y !== 6) topLeftFormatInfoBits = U.pushBit(matrix.get(8, y), topLeftFormatInfoBits); // Skip timing pattern bit
+						const dimension = matrix.height;
+						let topRightBottomRightFormatInfoBits = 0;
+						for (let y = dimension - 1; y >= dimension - 7; y--)
+							topRightBottomRightFormatInfoBits = U.pushBit(
+								matrix.get(8, y),
+								topRightBottomRightFormatInfoBits
+							); // bottom left
+						for (let x = dimension - 8; x < dimension; x++)
+							topRightBottomRightFormatInfoBits = U.pushBit(
+								matrix.get(x, 8),
+								topRightBottomRightFormatInfoBits
+							); // top right
+						let bestDifference = Infinity;
+						let bestFormatInfo = null;
+						for (
+							let _i = 0, FORMAT_INFO_TABLE_1 = FORMAT_INFO_TABLE;
+							_i < FORMAT_INFO_TABLE_1.length;
+							_i++
+						) {
+							const _a = FORMAT_INFO_TABLE_1[_i],
+								bits = _a.bits,
+								formatInfo = _a.formatInfo;
+							if (bits === topLeftFormatInfoBits || bits === topRightBottomRightFormatInfoBits)
+								return formatInfo;
+							const difference1 = U.numBitsDiffering(topLeftFormatInfoBits, bits);
+							if (difference1 < bestDifference) {
+								bestFormatInfo = formatInfo;
+								bestDifference = difference1;
+							}
+							if (topLeftFormatInfoBits !== topRightBottomRightFormatInfoBits) {
+								const difference = U.numBitsDiffering(topRightBottomRightFormatInfoBits, bits); // also try the other option
+								if (difference < bestDifference) {
+									bestFormatInfo = formatInfo;
+									bestDifference = difference;
+								}
+							}
 						}
-					});
-					// In some cases the QR code will be malformed enough that we pull off more or less than we should.
-					// If we pull off less there's nothing we can do.
-					// If we pull off more we can safely truncate
-					if (codewords.length < totalCodewords) {
-						return null;
+						return bestDifference <= 3 ? bestFormatInfo : null; // Hamming distance of the 32 masked codes is 7, by construction, so <= 3 bits differing means we found a match
 					}
-					codewords = codewords.slice(0, totalCodewords);
-					var shortBlockSize = ecInfo.ecBlocks[0].dataCodewordsPerBlock;
-					// Pull codewords to fill the blocks up to the minimum size
-					for (var i = 0; i < shortBlockSize; i++) {
-						for (var _i = 0, dataBlocks_1 = dataBlocks; _i < dataBlocks_1.length; _i++) {
-							var dataBlock = dataBlocks_1[_i];
-							dataBlock.codewords.push(codewords.shift());
+					static getDataBlocks(codewords, version, ecLevel) {
+						const ecInfo = version.errorCorrectionLevels[ecLevel];
+						const dataBlocks = [];
+						let totalCodewords = 0;
+						for (const block of ecInfo.ecBlocks)
+							for (let i = 0; i < block.numBlocks; i++) {
+								dataBlocks.push({ numDataCodewords: block.dataCodewordsPerBlock, codewords: [] });
+								totalCodewords += block.dataCodewordsPerBlock + ecInfo.ecCodewordsPerBlock;
+							}
+						// In some cases the QR code will be malformed enough that we pull off more or less than we should.
+						// If we pull off less there's nothing we can do.
+						// If we pull off more we can safely truncate
+						if (codewords.length < totalCodewords) return null;
+						codewords = codewords.slice(0, totalCodewords);
+						const shortBlockSize = ecInfo.ecBlocks[0].dataCodewordsPerBlock;
+						for (let i = 0; i < shortBlockSize; i++)
+							for (const dataBlock of dataBlocks) dataBlock.codewords.push(codewords.shift()); // Pull codewords to fill the blocks up to the minimum size
+						// If there are any large blocks, pull codewords to fill the last element of those
+						if (ecInfo.ecBlocks.length > 1) {
+							const smallBlockCount = ecInfo.ecBlocks[0].numBlocks;
+							const largeBlockCount = ecInfo.ecBlocks[1].numBlocks;
+							for (let i = 0; i < largeBlockCount; i++)
+								dataBlocks[smallBlockCount + i].codewords.push(codewords.shift());
 						}
+						while (codewords.length > 0)
+							for (const dataBlock of dataBlocks) dataBlock.codewords.push(codewords.shift()); // Add the rest of the codewords to the blocks. These are the error correction codewords.
+						return dataBlocks;
 					}
-					// If there are any large blocks, pull codewords to fill the last element of those
-					if (ecInfo.ecBlocks.length > 1) {
-						var smallBlockCount = ecInfo.ecBlocks[0].numBlocks;
-						var largeBlockCount = ecInfo.ecBlocks[1].numBlocks;
-						for (var i = 0; i < largeBlockCount; i++) {
-							dataBlocks[smallBlockCount + i].codewords.push(codewords.shift());
+					static decodeMatrix(matrix) {
+						const version = U.readVersion(matrix);
+						if (!version) return null;
+						const formatInfo = U.readFormatInformation(matrix);
+						if (!formatInfo) return null;
+						const codewords = U.readCodewords(matrix, version, formatInfo);
+						const dataBlocks = U.getDataBlocks(codewords, version, formatInfo.errorCorrectionLevel);
+						if (!dataBlocks) return null;
+						const totalBytes = dataBlocks.reduce(function (a, b) {
+							return a + b.numDataCodewords;
+						}, 0); // Count total number of data bytes
+						const resultBytes = new Uint8ClampedArray(totalBytes);
+						let resultIndex = 0;
+						for (const dataBlock of dataBlocks) {
+							const correctedBytes = reedsolomon_1.decode(
+								dataBlock.codewords,
+								dataBlock.codewords.length - dataBlock.numDataCodewords
+							);
+							if (!correctedBytes) return null;
+							for (let i = 0; i < dataBlock.numDataCodewords; i++)
+								resultBytes[resultIndex++] = correctedBytes[i];
 						}
-					}
-					// Add the rest of the codewords to the blocks. These are the error correction codewords.
-					while (codewords.length > 0) {
-						for (var _a = 0, dataBlocks_2 = dataBlocks; _a < dataBlocks_2.length; _a++) {
-							var dataBlock = dataBlocks_2[_a];
-							dataBlock.codewords.push(codewords.shift());
-						}
-					}
-					return dataBlocks;
-				}
-				function decodeMatrix(matrix) {
-					var version = readVersion(matrix);
-					if (!version) {
-						return null;
-					}
-					var formatInfo = readFormatInformation(matrix);
-					if (!formatInfo) {
-						return null;
-					}
-					var codewords = readCodewords(matrix, version, formatInfo);
-					var dataBlocks = getDataBlocks(codewords, version, formatInfo.errorCorrectionLevel);
-					if (!dataBlocks) {
-						return null;
-					}
-					// Count total number of data bytes
-					var totalBytes = dataBlocks.reduce(function (a, b) {
-						return a + b.numDataCodewords;
-					}, 0);
-					var resultBytes = new Uint8ClampedArray(totalBytes);
-					var resultIndex = 0;
-					for (var _i = 0, dataBlocks_3 = dataBlocks; _i < dataBlocks_3.length; _i++) {
-						var dataBlock = dataBlocks_3[_i];
-						var correctedBytes = reedsolomon_1.decode(
-							dataBlock.codewords,
-							dataBlock.codewords.length - dataBlock.numDataCodewords
-						);
-						if (!correctedBytes) {
+						try {
+							return decodeData_1.decode(resultBytes, version.versionNumber);
+						} catch (_a) {
 							return null;
 						}
-						for (var i = 0; i < dataBlock.numDataCodewords; i++) {
-							resultBytes[resultIndex++] = correctedBytes[i];
-						}
-					}
-					try {
-						return decodeData_1.decode(resultBytes, version.versionNumber);
-					} catch (_a) {
-						return null;
 					}
 				}
 				function decode(matrix) {
-					if (matrix == null) {
-						return null;
-					}
-					var result = decodeMatrix(matrix);
-					if (result) {
-						return result;
-					}
+					if (matrix == null) return null;
+					const result = U.decodeMatrix(matrix);
+					if (result) return result;
 					// Decoding didn't work, try mirroring the QR across the topLeft -> bottomRight line.
-					for (var x = 0; x < matrix.width; x++) {
-						for (var y = x + 1; y < matrix.height; y++) {
+					for (let x = 0; x < matrix.width; x++)
+						for (let y = x + 1; y < matrix.height; y++)
 							if (matrix.get(x, y) !== matrix.get(y, x)) {
 								matrix.set(x, y, !matrix.get(x, y));
 								matrix.set(y, x, !matrix.get(y, x));
 							}
-						}
-					}
-					return decodeMatrix(matrix);
+					return U.decodeMatrix(matrix);
 				}
 				exports.decode = decode;
-
-				/***/
 			},
 			/* 6 */
 			/***/ function (module, exports, __webpack_require__) {
