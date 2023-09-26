@@ -271,22 +271,20 @@
 			/* 3 */
 			/***/ function (module, exports, __webpack_require__) {
 				'use strict';
-
 				Object.defineProperty(exports, '__esModule', { value: true });
-				var binarizer_1 = __webpack_require__(4);
-				var decoder_1 = __webpack_require__(5);
-				var extractor_1 = __webpack_require__(11);
-				var locator_1 = __webpack_require__(12);
+				const binarizer_1 = __webpack_require__(4);
+				const decoder_1 = __webpack_require__(5);
+				const extractor_1 = __webpack_require__(11);
+				const locator_1 = __webpack_require__(12);
 				function scan(matrix) {
-					var locations = locator_1.locate(matrix);
-					if (!locations) {
-						return null;
-					}
-					for (var _i = 0, locations_1 = locations; _i < locations_1.length; _i++) {
-						var location_1 = locations_1[_i];
-						var extracted = extractor_1.extract(matrix, location_1);
-						var decoded = decoder_1.decode(extracted.matrix);
-						if (decoded) {
+					const locations = locator_1.locate(matrix);
+					if (!locations) return null;
+					let locations_1 = locations;
+					for (let _i = 0; _i < locations_1.length; _i++) {
+						const location_1 = locations_1[_i];
+						const extracted = extractor_1.extract(matrix, location_1);
+						const decoded = decoder_1.decode(extracted.matrix);
+						if (decoded)
 							return {
 								binaryData: decoded.bytes,
 								data: decoded.text,
@@ -306,41 +304,32 @@
 									bottomRightAlignmentPattern: location_1.alignmentPattern,
 								},
 							};
-						}
 					}
 					return null;
 				}
-				var defaultOptions = {
+				const defaultOptions = {
 					inversionAttempts: 'attemptBoth',
 				};
-				function jsQR(data, width, height, providedOptions) {
-					if (providedOptions === void 0) {
-						providedOptions = {};
-					}
-					var options = defaultOptions;
-					Object.keys(options || {}).forEach(function (opt) {
-						options[opt] = providedOptions[opt] || options[opt];
-					});
-					var shouldInvert =
+				const jsQR = function (data, width, height, providedOptions = {}) {
+					const options = defaultOptions ? defaultOptions : {};
+					for (const opt in options) options[opt] = providedOptions[opt] || options[opt];
+					const shouldInvert =
 						options.inversionAttempts === 'attemptBoth' || options.inversionAttempts === 'invertFirst';
-					var tryInvertedFirst =
+					const tryInvertedFirst =
 						options.inversionAttempts === 'onlyInvert' || options.inversionAttempts === 'invertFirst';
-					var _a = binarizer_1.binarize(data, width, height, shouldInvert),
+					const _a = binarizer_1.binarize(data, width, height, shouldInvert),
 						binarized = _a.binarized,
 						inverted = _a.inverted;
-					var result = scan(tryInvertedFirst ? inverted : binarized);
+					let result = scan(tryInvertedFirst ? inverted : binarized);
 					if (
 						!result &&
 						(options.inversionAttempts === 'attemptBoth' || options.inversionAttempts === 'invertFirst')
-					) {
+					)
 						result = scan(tryInvertedFirst ? binarized : inverted);
-					}
 					return result;
-				}
+				};
 				jsQR.default = jsQR;
 				exports.default = jsQR;
-
-				/***/
 			},
 			/* 4 */
 			/***/ function (module, exports, __webpack_require__) {
