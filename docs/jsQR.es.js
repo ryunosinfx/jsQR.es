@@ -930,23 +930,21 @@
 
 				// tslint:disable:no-bitwise
 				Object.defineProperty(exports, '__esModule', { value: true });
-				var BitStream = /** @class */ (function () {
-					function BitStream(bytes) {
+				class BitStream {
+					constructor(bytes) {
 						this.byteOffset = 0;
 						this.bitOffset = 0;
 						this.bytes = bytes;
 					}
-					BitStream.prototype.readBits = function (numBits) {
-						if (numBits < 1 || numBits > 32 || numBits > this.available()) {
+					readBits(numBits) {
+						if (numBits < 1 || numBits > 32 || numBits > this.available())
 							throw new Error('Cannot read ' + numBits.toString() + ' bits');
-						}
-						var result = 0;
-						// First, read remainder from current byte
+						let result = 0;
 						if (this.bitOffset > 0) {
-							var bitsLeft = 8 - this.bitOffset;
-							var toRead = numBits < bitsLeft ? numBits : bitsLeft;
-							var bitsToNotRead = bitsLeft - toRead;
-							var mask = (0xff >> (8 - toRead)) << bitsToNotRead;
+							const bitsLeft = 8 - this.bitOffset, // First, read remainder from current byte
+								toRead = numBits < bitsLeft ? numBits : bitsLeft,
+								bitsToNotRead = bitsLeft - toRead,
+								mask = (0xff >> (8 - toRead)) << bitsToNotRead;
 							result = (this.bytes[this.byteOffset] & mask) >> bitsToNotRead;
 							numBits -= toRead;
 							this.bitOffset += toRead;
@@ -955,31 +953,26 @@
 								this.byteOffset++;
 							}
 						}
-						// Next read whole bytes
 						if (numBits > 0) {
 							while (numBits >= 8) {
-								result = (result << 8) | (this.bytes[this.byteOffset] & 0xff);
+								result = (result << 8) | (this.bytes[this.byteOffset] & 0xff); // Next read whole bytes
 								this.byteOffset++;
 								numBits -= 8;
 							}
-							// Finally read a partial byte
 							if (numBits > 0) {
-								var bitsToNotRead = 8 - numBits;
-								var mask = (0xff >> bitsToNotRead) << bitsToNotRead;
+								const bitsToNotRead = 8 - numBits, // Finally read a partial byte
+									mask = (0xff >> bitsToNotRead) << bitsToNotRead;
 								result = (result << numBits) | ((this.bytes[this.byteOffset] & mask) >> bitsToNotRead);
 								this.bitOffset += numBits;
 							}
 						}
 						return result;
-					};
-					BitStream.prototype.available = function () {
+					}
+					available() {
 						return 8 * (this.bytes.length - this.byteOffset) - this.bitOffset;
-					};
-					return BitStream;
-				})();
+					}
+				}
 				exports.BitStream = BitStream;
-
-				/***/
 			},
 			/* 8 */
 			/***/ function (module, exports, __webpack_require__) {
