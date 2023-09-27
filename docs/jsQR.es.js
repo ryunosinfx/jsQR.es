@@ -742,254 +742,187 @@
 
 				Object.defineProperty(exports, '__esModule', { value: true });
 				// tslint:disable:no-bitwise
-				var BitStream_1 = __webpack_require__(7);
-				var shiftJISTable_1 = __webpack_require__(8);
-				var Mode;
-				(function (Mode) {
-					Mode['Numeric'] = 'numeric';
-					Mode['Alphanumeric'] = 'alphanumeric';
-					Mode['Byte'] = 'byte';
-					Mode['Kanji'] = 'kanji';
-					Mode['ECI'] = 'eci';
-				})((Mode = exports.Mode || (exports.Mode = {})));
-				var ModeByte;
-				(function (ModeByte) {
-					ModeByte[(ModeByte['Terminator'] = 0)] = 'Terminator';
-					ModeByte[(ModeByte['Numeric'] = 1)] = 'Numeric';
-					ModeByte[(ModeByte['Alphanumeric'] = 2)] = 'Alphanumeric';
-					ModeByte[(ModeByte['Byte'] = 4)] = 'Byte';
-					ModeByte[(ModeByte['Kanji'] = 8)] = 'Kanji';
-					ModeByte[(ModeByte['ECI'] = 7)] = 'ECI';
-					// StructuredAppend = 0x3,
-					// FNC1FirstPosition = 0x5,
-					// FNC1SecondPosition = 0x9,
-				})(ModeByte || (ModeByte = {}));
-				function decodeNumeric(stream, size) {
-					var bytes = [];
-					var text = '';
-					var characterCountSize = [10, 12, 14][size];
-					var length = stream.readBits(characterCountSize);
-					// Read digits in groups of 3
-					while (length >= 3) {
-						var num = stream.readBits(10);
-						if (num >= 1000) {
-							throw new Error('Invalid numeric value above 999');
+				const BitStream_1 = __webpack_require__(7);
+				const shiftJISTable_1 = __webpack_require__(8);
+				if (!exports.Mode) exports.Mode = {};
+				const Mode = exports.Mode;
+				Mode['Numeric'] = 'numeric';
+				Mode['Alphanumeric'] = 'alphanumeric';
+				Mode['Byte'] = 'byte';
+				Mode['Kanji'] = 'kanji';
+				Mode['ECI'] = 'eci';
+				const ModeByte = {};
+				ModeByte[(ModeByte['Terminator'] = 0)] = 'Terminator';
+				ModeByte[(ModeByte['Numeric'] = 1)] = 'Numeric';
+				ModeByte[(ModeByte['Alphanumeric'] = 2)] = 'Alphanumeric';
+				ModeByte[(ModeByte['Byte'] = 4)] = 'Byte';
+				ModeByte[(ModeByte['Kanji'] = 8)] = 'Kanji';
+				ModeByte[(ModeByte['ECI'] = 7)] = 'ECI';
+				// StructuredAppend = 0x3,
+				// FNC1FirstPosition = 0x5,
+				// FNC1SecondPosition = 0x9,
+				class N {
+					static decodeNumeric(stream, size) {
+						const bytes = [],
+							characterCountSize = [10, 12, 14][size];
+						let text = '',
+							length = stream.readBits(characterCountSize);
+						while (length >= 3) {
+							const num = stream.readBits(10); // Read digits in groups of 3
+							if (num >= 1000) throw new Error('Invalid numeric value above 999');
+							const a = Math.floor(num / 100),
+								b = Math.floor(num / 10) % 10,
+								c = num % 10;
+							bytes.push(48 + a, 48 + b, 48 + c);
+							text += a.toString() + b.toString() + c.toString();
+							length -= 3;
 						}
-						var a = Math.floor(num / 100);
-						var b = Math.floor(num / 10) % 10;
-						var c = num % 10;
-						bytes.push(48 + a, 48 + b, 48 + c);
-						text += a.toString() + b.toString() + c.toString();
-						length -= 3;
-					}
-					// If the number of digits aren't a multiple of 3, the remaining digits are special cased.
-					if (length === 2) {
-						const num = stream.readBits(7);
-						if (num >= 100) throw new Error('Invalid numeric value above 99');
-						const a = Math.floor(num / 10);
-						const b = num % 10;
-						bytes.push(48 + a, 48 + b);
-						text += a.toString() + b.toString();
-					} else if (length === 1) {
-						const num = stream.readBits(4);
-						if (num >= 10) throw new Error('Invalid numeric value above 9');
-						bytes.push(48 + num);
-						text += num.toString();
-					}
-					return { bytes, text };
-				}
-				var AlphanumericCharacterCodes = [
-					'0',
-					'1',
-					'2',
-					'3',
-					'4',
-					'5',
-					'6',
-					'7',
-					'8',
-					'9',
-					'A',
-					'B',
-					'C',
-					'D',
-					'E',
-					'F',
-					'G',
-					'H',
-					'I',
-					'J',
-					'K',
-					'L',
-					'M',
-					'N',
-					'O',
-					'P',
-					'Q',
-					'R',
-					'S',
-					'T',
-					'U',
-					'V',
-					'W',
-					'X',
-					'Y',
-					'Z',
-					' ',
-					'$',
-					'%',
-					'*',
-					'+',
-					'-',
-					'.',
-					'/',
-					':',
-				];
-				function decodeAlphanumeric(stream, size) {
-					var bytes = [];
-					var text = '';
-					var characterCountSize = [9, 11, 13][size];
-					var length = stream.readBits(characterCountSize);
-					while (length >= 2) {
-						var v = stream.readBits(11);
-						var a = Math.floor(v / 45);
-						var b = v % 45;
-						bytes.push(
-							AlphanumericCharacterCodes[a].charCodeAt(0),
-							AlphanumericCharacterCodes[b].charCodeAt(0)
-						);
-						text += AlphanumericCharacterCodes[a] + AlphanumericCharacterCodes[b];
-						length -= 2;
-					}
-					if (length === 1) {
-						var a = stream.readBits(6);
-						bytes.push(AlphanumericCharacterCodes[a].charCodeAt(0));
-						text += AlphanumericCharacterCodes[a];
-					}
-					return { bytes: bytes, text: text };
-				}
-				function decodeByte(stream, size) {
-					var bytes = [];
-					var text = '';
-					var characterCountSize = [8, 16, 16][size];
-					var length = stream.readBits(characterCountSize);
-					for (var i = 0; i < length; i++) {
-						var b = stream.readBits(8);
-						bytes.push(b);
-					}
-					try {
-						text += decodeURIComponent(
-							bytes
-								.map(function (b) {
-									return '%' + ('0' + b.toString(16)).substr(-2);
-								})
-								.join('')
-						);
-					} catch (_a) {
-						// failed to decode
-					}
-					return { bytes: bytes, text: text };
-				}
-				function decodeKanji(stream, size) {
-					var bytes = [];
-					var text = '';
-					var characterCountSize = [8, 10, 12][size];
-					var length = stream.readBits(characterCountSize);
-					for (var i = 0; i < length; i++) {
-						var k = stream.readBits(13);
-						var c = (Math.floor(k / 0xc0) << 8) | k % 0xc0;
-						if (c < 0x1f00) {
-							c += 0x8140;
-						} else {
-							c += 0xc140;
+						if (length === 2) {
+							const num = stream.readBits(7); // If the number of digits aren't a multiple of 3, the remaining digits are special cased.
+							if (num >= 100) throw new Error('Invalid numeric value above 99');
+							const a = Math.floor(num / 10),
+								b = num % 10;
+							bytes.push(48 + a, 48 + b);
+							text += a.toString() + b.toString();
+						} else if (length === 1) {
+							const num = stream.readBits(4);
+							if (num >= 10) throw new Error('Invalid numeric value above 9');
+							bytes.push(48 + num);
+							text += num.toString();
 						}
-						bytes.push(c >> 8, c & 0xff);
-						text += String.fromCharCode(shiftJISTable_1.shiftJISTable[c]);
+						return { bytes, text };
 					}
-					return { bytes: bytes, text: text };
-				}
-				function decode(data, version) {
-					var _a, _b, _c, _d;
-					var stream = new BitStream_1.BitStream(data);
-					// There are 3 'sizes' based on the version. 1-9 is small (0), 10-26 is medium (1) and 27-40 is large (2).
-					var size = version <= 9 ? 0 : version <= 26 ? 1 : 2;
-					var result = {
-						text: '',
-						bytes: [],
-						chunks: [],
-						version: version,
-					};
-					while (stream.available() >= 4) {
-						var mode = stream.readBits(4);
-						if (mode === ModeByte.Terminator) {
-							return result;
-						} else if (mode === ModeByte.ECI) {
-							if (stream.readBits(1) === 0) {
+					static AlphanumericCharacterCodes = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:'.split('');
+					static decodeAlphanumeric(stream, size) {
+						const bytes = [],
+							characterCountSize = [9, 11, 13][size];
+						let text = '',
+							length = stream.readBits(characterCountSize);
+						while (length >= 2) {
+							const v = stream.readBits(11),
+								a = Math.floor(v / 45),
+								b = v % 45;
+							bytes.push(
+								N.AlphanumericCharacterCodes[a].charCodeAt(0),
+								N.AlphanumericCharacterCodes[b].charCodeAt(0)
+							);
+							text += N.AlphanumericCharacterCodes[a] + N.AlphanumericCharacterCodes[b];
+							length -= 2;
+						}
+						if (length === 1) {
+							const a = stream.readBits(6);
+							bytes.push(N.AlphanumericCharacterCodes[a].charCodeAt(0));
+							text += N.AlphanumericCharacterCodes[a];
+						}
+						return { bytes, text };
+					}
+					static decodeByte(stream, size) {
+						const bytes = [],
+							characterCountSize = [8, 16, 16][size];
+						let text = '',
+							length = stream.readBits(characterCountSize);
+						for (let i = 0; i < length; i++) bytes.push(stream.readBits(8));
+						try {
+							text += decodeURIComponent(
+								bytes
+									.map((b) => {
+										return '%' + ('0' + b.toString(16)).substr(-2);
+									})
+									.join('')
+							);
+						} catch (_a) {
+							// failed to decode
+						}
+						return { bytes, text };
+					}
+					static decodeKanji(stream, size) {
+						const bytes = [],
+							characterCountSize = [8, 10, 12][size];
+						let text = '',
+							length = stream.readBits(characterCountSize);
+						for (let i = 0; i < length; i++) {
+							const k = stream.readBits(13);
+							let c = (Math.floor(k / 0xc0) << 8) | k % 0xc0;
+							c += c < 0x1f00 ? 0x8140 : 0xc140;
+							bytes.push(c >> 8, c & 0xff);
+							text += String.fromCharCode(shiftJISTable_1.shiftJISTable[c]);
+						}
+						return { bytes, text };
+					}
+					static decode(data, version) {
+						let _a, _b, _c, _d;
+						const stream = new BitStream_1.BitStream(data);
+						const size = version <= 9 ? 0 : version <= 26 ? 1 : 2; // There are 3 'sizes' based on the version. 1-9 is small (0), 10-26 is medium (1) and 27-40 is large (2).
+						const result = {
+							text: '',
+							bytes: [],
+							chunks: [],
+							version: version,
+						};
+						while (stream.available() >= 4) {
+							const mode = stream.readBits(4);
+							if (mode === ModeByte.Terminator) return result;
+							else if (mode === ModeByte.ECI) {
+								if (stream.readBits(1) === 0)
+									result.chunks.push({
+										type: Mode.ECI,
+										assignmentNumber: stream.readBits(7),
+									});
+								else if (stream.readBits(1) === 0)
+									result.chunks.push({
+										type: Mode.ECI,
+										assignmentNumber: stream.readBits(14),
+									});
+								else if (stream.readBits(1) === 0)
+									result.chunks.push({
+										type: Mode.ECI,
+										assignmentNumber: stream.readBits(21),
+									});
+								else
+									result.chunks.push({
+										type: Mode.ECI,
+										assignmentNumber: -1,
+									}); // ECI data seems corrupted
+							} else if (mode === ModeByte.Numeric) {
+								const numericResult = N.decodeNumeric(stream, size);
+								result.text += numericResult.text;
+								(_a = result.bytes).push.apply(_a, numericResult.bytes);
 								result.chunks.push({
-									type: Mode.ECI,
-									assignmentNumber: stream.readBits(7),
+									type: Mode.Numeric,
+									text: numericResult.text,
 								});
-							} else if (stream.readBits(1) === 0) {
+							} else if (mode === ModeByte.Alphanumeric) {
+								const alphanumericResult = N.decodeAlphanumeric(stream, size);
+								result.text += alphanumericResult.text;
+								(_b = result.bytes).push.apply(_b, alphanumericResult.bytes);
 								result.chunks.push({
-									type: Mode.ECI,
-									assignmentNumber: stream.readBits(14),
+									type: Mode.Alphanumeric,
+									text: alphanumericResult.text,
 								});
-							} else if (stream.readBits(1) === 0) {
+							} else if (mode === ModeByte.Byte) {
+								const byteResult = N.decodeByte(stream, size);
+								result.text += byteResult.text;
+								(_c = result.bytes).push.apply(_c, byteResult.bytes);
 								result.chunks.push({
-									type: Mode.ECI,
-									assignmentNumber: stream.readBits(21),
+									type: Mode.Byte,
+									bytes: byteResult.bytes,
+									text: byteResult.text,
 								});
-							} else {
-								// ECI data seems corrupted
+							} else if (mode === ModeByte.Kanji) {
+								const kanjiResult = N.decodeKanji(stream, size);
+								result.text += kanjiResult.text;
+								(_d = result.bytes).push.apply(_d, kanjiResult.bytes);
 								result.chunks.push({
-									type: Mode.ECI,
-									assignmentNumber: -1,
+									type: Mode.Kanji,
+									bytes: kanjiResult.bytes,
+									text: kanjiResult.text,
 								});
 							}
-						} else if (mode === ModeByte.Numeric) {
-							var numericResult = decodeNumeric(stream, size);
-							result.text += numericResult.text;
-							(_a = result.bytes).push.apply(_a, numericResult.bytes);
-							result.chunks.push({
-								type: Mode.Numeric,
-								text: numericResult.text,
-							});
-						} else if (mode === ModeByte.Alphanumeric) {
-							var alphanumericResult = decodeAlphanumeric(stream, size);
-							result.text += alphanumericResult.text;
-							(_b = result.bytes).push.apply(_b, alphanumericResult.bytes);
-							result.chunks.push({
-								type: Mode.Alphanumeric,
-								text: alphanumericResult.text,
-							});
-						} else if (mode === ModeByte.Byte) {
-							var byteResult = decodeByte(stream, size);
-							result.text += byteResult.text;
-							(_c = result.bytes).push.apply(_c, byteResult.bytes);
-							result.chunks.push({
-								type: Mode.Byte,
-								bytes: byteResult.bytes,
-								text: byteResult.text,
-							});
-						} else if (mode === ModeByte.Kanji) {
-							var kanjiResult = decodeKanji(stream, size);
-							result.text += kanjiResult.text;
-							(_d = result.bytes).push.apply(_d, kanjiResult.bytes);
-							result.chunks.push({
-								type: Mode.Kanji,
-								bytes: kanjiResult.bytes,
-								text: kanjiResult.text,
-							});
 						}
-					}
-					// If there is no data left, or the remaining bits are all 0, then that counts as a termination marker
-					if (stream.available() === 0 || stream.readBits(stream.available()) === 0) {
-						return result;
+						if (stream.available() === 0 || stream.readBits(stream.available()) === 0) return result; // If there is no data left, or the remaining bits are all 0, then that counts as a termination marker
 					}
 				}
-				exports.decode = decode;
-
-				/***/
+				exports.decode = N.decode;
 			},
 			/* 7 */
 			/***/ function (module, exports, __webpack_require__) {
