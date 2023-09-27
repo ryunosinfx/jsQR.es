@@ -199,15 +199,15 @@
 						let _a;
 						if (this.isZero()) return other;
 						if (other.isZero()) return this;
-						const smallerCoefficients = this.coefficients;
-						const largerCoefficients = other.coefficients;
+						const smallerCoefficients = this.coefficients,
+							largerCoefficients = other.coefficients;
 						if (smallerCoefficients.length > largerCoefficients.length) {
 							(_a = [largerCoefficients, smallerCoefficients]),
 								(smallerCoefficients = _a[0]),
 								(largerCoefficients = _a[1]);
 						}
-						const sumDiff = new Uint8ClampedArray(largerCoefficients.length);
-						const lengthDiff = largerCoefficients.length - smallerCoefficients.length;
+						const sumDiff = new Uint8ClampedArray(largerCoefficients.length),
+							lengthDiff = largerCoefficients.length - smallerCoefficients.length;
 						for (let i = 0; i < lengthDiff; i++) sumDiff[i] = largerCoefficients[i];
 						for (let i = lengthDiff; i < largerCoefficients.length; i++)
 							sumDiff[i] = GenericGF_1.addOrSubtractGF(
@@ -219,18 +219,18 @@
 					multiply(scalar) {
 						if (scalar === 0) return this.field.zero;
 						if (scalar === 1) return this;
-						const size = this.coefficients.length;
-						const product = new Uint8ClampedArray(size);
+						const size = this.coefficients.length,
+							product = new Uint8ClampedArray(size);
 						for (let i = 0; i < size; i++) product[i] = this.field.multiply(this.coefficients[i], scalar);
 						return new GenericGFPoly(this.field, product);
 					}
 					multiplyPoly(other) {
 						if (this.isZero() || other.isZero()) return this.field.zero;
-						const aCoefficients = this.coefficients;
-						const aLength = aCoefficients.length;
-						const bCoefficients = other.coefficients;
-						const bLength = bCoefficients.length;
-						const product = new Uint8ClampedArray(aLength + bLength - 1);
+						const aCoefficients = this.coefficients,
+							aLength = aCoefficients.length,
+							bCoefficients = other.coefficients,
+							bLength = bCoefficients.length,
+							product = new Uint8ClampedArray(aLength + bLength - 1);
 						for (let i = 0; i < aLength; i++) {
 							const aCoeff = aCoefficients[i];
 							for (let j = 0; j < bLength; j++)
@@ -244,8 +244,8 @@
 					multiplyByMonomial(degree, coefficient) {
 						if (degree < 0) throw new Error('Invalid degree less than 0');
 						if (coefficient === 0) return this.field.zero;
-						const size = this.coefficients.length;
-						const product = new Uint8ClampedArray(size + degree);
+						const size = this.coefficients.length,
+							product = new Uint8ClampedArray(size + degree);
 						for (let i = 0; i < size; i++)
 							product[i] = this.field.multiply(this.coefficients[i], coefficient);
 						return new GenericGFPoly(this.field, product);
@@ -281,9 +281,9 @@
 					if (!locations) return null;
 					let locations_1 = locations;
 					for (let _i = 0; _i < locations_1.length; _i++) {
-						const location_1 = locations_1[_i];
-						const extracted = extractor_1.extract(matrix, location_1);
-						const decoded = decoder_1.decode(extracted.matrix);
+						const location_1 = locations_1[_i],
+							extracted = extractor_1.extract(matrix, location_1),
+							decoded = decoder_1.decode(extracted.matrix);
 						if (decoded)
 							return {
 								binaryData: decoded.bytes,
@@ -431,9 +431,9 @@
 							const threshold = sum / 25;
 							for (let xRegion = 0; xRegion < REGION_SIZE; xRegion++)
 								for (let yRegion = 0; yRegion < REGION_SIZE; yRegion++) {
-									const x = hortizontalRegion * REGION_SIZE + xRegion;
-									const y = verticalRegion * REGION_SIZE + yRegion;
-									const lum = greyscalePixels.get(x, y);
+									const x = hortizontalRegion * REGION_SIZE + xRegion,
+										y = verticalRegion * REGION_SIZE + yRegion,
+										lum = greyscalePixels.get(x, y);
 									binarized.set(x, y, lum <= threshold);
 									if (returnInverted) inverted.set(x, y, !(lum <= threshold));
 								}
@@ -501,34 +501,34 @@
 						{ bits: 0x2bed, formatInfo: { errorCorrectionLevel: 2, dataMask: 7 } },
 					];
 					static DATA_MASKS = [
-						function (p) {
+						(p) => {
 							return (p.y + p.x) % 2 === 0;
 						},
-						function (p) {
+						(p) => {
 							return p.y % 2 === 0;
 						},
-						function (p) {
+						(p) => {
 							return p.x % 3 === 0;
 						},
-						function (p) {
+						(p) => {
 							return (p.y + p.x) % 3 === 0;
 						},
-						function (p) {
+						(p) => {
 							return (Math.floor(p.y / 2) + Math.floor(p.x / 3)) % 2 === 0;
 						},
-						function (p) {
+						(p) => {
 							return ((p.x * p.y) % 2) + ((p.x * p.y) % 3) === 0;
 						},
-						function (p) {
+						(p) => {
 							return (((p.y * p.x) % 2) + ((p.y * p.x) % 3)) % 2 === 0;
 						},
-						function (p) {
+						(p) => {
 							return (((p.y + p.x) % 2) + ((p.y * p.x) % 3)) % 2 === 0;
 						},
 					];
 					static buildFunctionPatternMask(version) {
-						const dimension = 17 + 4 * version.versionNumber;
-						const matrix = BitMatrix_1.BitMatrix.createEmpty(dimension, dimension);
+						const dimension = 17 + 4 * version.versionNumber,
+							matrix = BitMatrix_1.BitMatrix.createEmpty(dimension, dimension);
 						matrix.setRegion(0, 0, 9, 9, true); // Top left finder pattern + separator + format
 						matrix.setRegion(dimension - 8, 0, 8, 9, true); // Top right finder pattern + separator + format
 						matrix.setRegion(0, dimension - 8, 9, 8, true); // Bottom left finder pattern + separator + format
@@ -556,13 +556,13 @@
 						return matrix;
 					}
 					static readCodewords(matrix, version, formatInfo) {
-						const dataMask = DATA_MASKS[formatInfo.dataMask];
-						const dimension = matrix.height;
-						const functionPatternMask = U.buildFunctionPatternMask(version);
-						const codewords = [];
-						let currentByte = 0;
-						let bitsRead = 0;
-						let readingUp = true; // Read columns in pairs, from right to left
+						const dataMask = DATA_MASKS[formatInfo.dataMask],
+							dimension = matrix.height,
+							functionPatternMask = U.buildFunctionPatternMask(version),
+							codewords = [];
+						let currentByte = 0,
+							bitsRead = 0,
+							readingUp = true; // Read columns in pairs, from right to left
 						for (let columnIndex = dimension - 1; columnIndex > 0; columnIndex -= 2) {
 							if (columnIndex === 6) columnIndex--; // Skip whole column with vertical alignment pattern;
 							for (let i = 0; i < dimension; i++) {
@@ -587,19 +587,19 @@
 						return codewords;
 					}
 					static readVersion(matrix) {
-						const dimension = matrix.height;
-						const provisionalVersion = Math.floor((dimension - 17) / 4);
+						const dimension = matrix.height,
+							provisionalVersion = Math.floor((dimension - 17) / 4);
 						if (provisionalVersion <= 6) return version_1.VERSIONS[provisionalVersion - 1]; // 6 and under dont have version info in the QR code
-						let topRightVersionBits = 0;
+						let topRightVersionBits = 0,
+							bottomLeftVersionBits = 0;
 						for (let y = 5; y >= 0; y--)
 							for (let x = dimension - 9; x >= dimension - 11; x--)
 								topRightVersionBits = U.pushBit(matrix.get(x, y), topRightVersionBits);
-						let bottomLeftVersionBits = 0;
 						for (let x = 5; x >= 0; x--)
 							for (let y = dimension - 9; y >= dimension - 11; y--)
 								bottomLeftVersionBits = U.pushBit(matrix.get(x, y), bottomLeftVersionBits);
-						let bestDifference = Infinity;
-						let bestVersion;
+						let bestDifference = Infinity,
+							bestVersion;
 						for (let _i = 0, VERSIONS_1 = version_1.VERSIONS; _i < VERSIONS_1.length; _i++) {
 							const version = VERSIONS_1[_i];
 							if (version.infoBits === topRightVersionBits || version.infoBits === bottomLeftVersionBits)
@@ -620,13 +620,13 @@
 						if (bestDifference <= 3) return bestVersion;
 					}
 					static readFormatInformation(matrix) {
-						let topLeftFormatInfoBits = 0;
+						let topLeftFormatInfoBits = 0,
+							topRightBottomRightFormatInfoBits = 0;
 						for (let x = 0; x <= 8; x++)
 							if (x !== 6) topLeftFormatInfoBits = U.pushBit(matrix.get(x, 8), topLeftFormatInfoBits); // Skip timing pattern bit
 						for (let y = 7; y >= 0; y--)
 							if (y !== 6) topLeftFormatInfoBits = U.pushBit(matrix.get(8, y), topLeftFormatInfoBits); // Skip timing pattern bit
 						const dimension = matrix.height;
-						let topRightBottomRightFormatInfoBits = 0;
 						for (let y = dimension - 1; y >= dimension - 7; y--)
 							topRightBottomRightFormatInfoBits = U.pushBit(
 								matrix.get(8, y),
@@ -637,8 +637,8 @@
 								matrix.get(x, 8),
 								topRightBottomRightFormatInfoBits
 							); // top right
-						let bestDifference = Infinity;
-						let bestFormatInfo = null;
+						let bestDifference = Infinity,
+							bestFormatInfo = null;
 						for (
 							let _i = 0, FORMAT_INFO_TABLE_1 = FORMAT_INFO_TABLE;
 							_i < FORMAT_INFO_TABLE_1.length;
@@ -665,8 +665,8 @@
 						return bestDifference <= 3 ? bestFormatInfo : null; // Hamming distance of the 32 masked codes is 7, by construction, so <= 3 bits differing means we found a match
 					}
 					static getDataBlocks(codewords, version, ecLevel) {
-						const ecInfo = version.errorCorrectionLevels[ecLevel];
-						const dataBlocks = [];
+						const ecInfo = version.errorCorrectionLevels[ecLevel],
+							dataBlocks = [];
 						let totalCodewords = 0;
 						for (const block of ecInfo.ecBlocks)
 							for (let i = 0; i < block.numBlocks; i++) {
@@ -683,8 +683,8 @@
 							for (const dataBlock of dataBlocks) dataBlock.codewords.push(codewords.shift()); // Pull codewords to fill the blocks up to the minimum size
 						// If there are any large blocks, pull codewords to fill the last element of those
 						if (ecInfo.ecBlocks.length > 1) {
-							const smallBlockCount = ecInfo.ecBlocks[0].numBlocks;
-							const largeBlockCount = ecInfo.ecBlocks[1].numBlocks;
+							const smallBlockCount = ecInfo.ecBlocks[0].numBlocks,
+								largeBlockCount = ecInfo.ecBlocks[1].numBlocks;
 							for (let i = 0; i < largeBlockCount; i++)
 								dataBlocks[smallBlockCount + i].codewords.push(codewords.shift());
 						}
@@ -697,8 +697,8 @@
 						if (!version) return null;
 						const formatInfo = U.readFormatInformation(matrix);
 						if (!formatInfo) return null;
-						const codewords = U.readCodewords(matrix, version, formatInfo);
-						const dataBlocks = U.getDataBlocks(codewords, version, formatInfo.errorCorrectionLevel);
+						const codewords = U.readCodewords(matrix, version, formatInfo),
+							dataBlocks = U.getDataBlocks(codewords, version, formatInfo.errorCorrectionLevel);
 						if (!dataBlocks) return null;
 						const totalBytes = dataBlocks.reduce(function (a, b) {
 							return a + b.numDataCodewords;
