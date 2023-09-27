@@ -1054,129 +1054,101 @@
 				Object.defineProperty(exports, '__esModule', { value: true });
 				var GenericGF_1 = __webpack_require__(1);
 				var GenericGFPoly_1 = __webpack_require__(2);
-				function runEuclideanAlgorithm(field, a, b, R) {
-					var _a;
-					// Assume a's degree is >= b's
-					if (a.degree() < b.degree()) {
-						(_a = [b, a]), (a = _a[0]), (b = _a[1]);
-					}
-					var rLast = a;
-					var r = b;
-					var tLast = field.zero;
-					var t = field.one;
-					// Run Euclidean algorithm until r's degree is less than R/2
-					while (r.degree() >= R / 2) {
-						var rLastLast = rLast;
-						var tLastLast = tLast;
-						rLast = r;
-						tLast = t;
-						// Divide rLastLast by rLast, with quotient in q and remainder in r
-						if (rLast.isZero()) {
-							// Euclidean algorithm already terminated?
-							return null;
-						}
-						r = rLastLast;
-						var q = field.zero;
-						var denominatorLeadingTerm = rLast.getCoefficient(rLast.degree());
-						var dltInverse = field.inverse(denominatorLeadingTerm);
-						while (r.degree() >= rLast.degree() && !r.isZero()) {
-							var degreeDiff = r.degree() - rLast.degree();
-							var scale = field.multiply(r.getCoefficient(r.degree()), dltInverse);
-							q = q.addOrSubtract(field.buildMonomial(degreeDiff, scale));
-							r = r.addOrSubtract(rLast.multiplyByMonomial(degreeDiff, scale));
-						}
-						t = q.multiplyPoly(tLast).addOrSubtract(tLastLast);
-						if (r.degree() >= rLast.degree()) {
-							return null;
-						}
-					}
-					var sigmaTildeAtZero = t.getCoefficient(0);
-					if (sigmaTildeAtZero === 0) {
-						return null;
-					}
-					var inverse = field.inverse(sigmaTildeAtZero);
-					return [t.multiply(inverse), r.multiply(inverse)];
-				}
-				function findErrorLocations(field, errorLocator) {
-					// This is a direct application of Chien's search
-					var numErrors = errorLocator.degree();
-					if (numErrors === 1) {
-						return [errorLocator.getCoefficient(1)];
-					}
-					var result = new Array(numErrors);
-					var errorCount = 0;
-					for (var i = 1; i < field.size && errorCount < numErrors; i++) {
-						if (errorLocator.evaluateAt(i) === 0) {
-							result[errorCount] = field.inverse(i);
-							errorCount++;
-						}
-					}
-					if (errorCount !== numErrors) {
-						return null;
-					}
-					return result;
-				}
-				function findErrorMagnitudes(field, errorEvaluator, errorLocations) {
-					// This is directly applying Forney's Formula
-					var s = errorLocations.length;
-					var result = new Array(s);
-					for (var i = 0; i < s; i++) {
-						var xiInverse = field.inverse(errorLocations[i]);
-						var denominator = 1;
-						for (var j = 0; j < s; j++) {
-							if (i !== j) {
-								denominator = field.multiply(
-									denominator,
-									GenericGF_1.addOrSubtractGF(1, field.multiply(errorLocations[j], xiInverse))
-								);
+				class E {
+					static runEuclideanAlgorithm(field, a, b, R) {
+						let _a;
+						if (a.degree() < b.degree()) (_a = [b, a]), (a = _a[0]), (b = _a[1]); // Assume a's degree is >= b's
+						let rLast = a,
+							r = b,
+							tLast = field.zero,
+							t = field.one;
+						while (r.degree() >= R / 2) {
+							const rLastLast = rLast, // Run Euclidean algorithm until r's degree is less than R/2
+								tLastLast = tLast;
+							rLast = r;
+							tLast = t; // Divide rLastLast by rLast, with quotient in q and remainder in r
+							if (rLast.isZero()) return null; // Euclidean algorithm already terminated?
+							r = rLastLast;
+							let q = field.zero;
+							const denominatorLeadingTerm = rLast.getCoefficient(rLast.degree()),
+								dltInverse = field.inverse(denominatorLeadingTerm);
+							while (r.degree() >= rLast.degree() && !r.isZero()) {
+								const degreeDiff = r.degree() - rLast.degree(),
+									scale = field.multiply(r.getCoefficient(r.degree()), dltInverse);
+								q = q.addOrSubtract(field.buildMonomial(degreeDiff, scale));
+								r = r.addOrSubtract(rLast.multiplyByMonomial(degreeDiff, scale));
 							}
+							t = q.multiplyPoly(tLast).addOrSubtract(tLastLast);
+							if (r.degree() >= rLast.degree()) return null;
 						}
-						result[i] = field.multiply(errorEvaluator.evaluateAt(xiInverse), field.inverse(denominator));
-						if (field.generatorBase !== 0) {
-							result[i] = field.multiply(result[i], xiInverse);
-						}
+						var sigmaTildeAtZero = t.getCoefficient(0);
+						if (sigmaTildeAtZero === 0) return null;
+						const inverse = field.inverse(sigmaTildeAtZero);
+						return [t.multiply(inverse), r.multiply(inverse)];
 					}
-					return result;
-				}
-				function decode(bytes, twoS) {
-					var outputBytes = new Uint8ClampedArray(bytes.length);
-					outputBytes.set(bytes);
-					var field = new GenericGF_1.default(0x011d, 256, 0); // x^8 + x^4 + x^3 + x^2 + 1
-					var poly = new GenericGFPoly_1.default(field, outputBytes);
-					var syndromeCoefficients = new Uint8ClampedArray(twoS);
-					var error = false;
-					for (var s = 0; s < twoS; s++) {
-						var evaluation = poly.evaluateAt(field.exp(s + field.generatorBase));
-						syndromeCoefficients[syndromeCoefficients.length - 1 - s] = evaluation;
-						if (evaluation !== 0) {
-							error = true;
-						}
+					static findErrorLocations(field, errorLocator) {
+						const numErrors = errorLocator.degree(); // This is a direct application of Chien's searchS
+						if (numErrors === 1) return [errorLocator.getCoefficient(1)];
+						const result = new Array(numErrors);
+						let errorCount = 0;
+						for (let i = 1; i < field.size && errorCount < numErrors; i++)
+							if (errorLocator.evaluateAt(i) === 0) {
+								result[errorCount] = field.inverse(i);
+								errorCount++;
+							}
+						return errorCount !== numErrors ? null : result;
 					}
-					if (!error) {
+					static findErrorMagnitudes(field, errorEvaluator, errorLocations) {
+						const s = errorLocations.length; // This is directly applying Forney's Formula
+						const result = new Array(s);
+						for (let i = 0; i < s; i++) {
+							const xiInverse = field.inverse(errorLocations[i]);
+							let denominator = 1;
+							for (let j = 0; j < s; j++)
+								if (i !== j)
+									denominator = field.multiply(
+										denominator,
+										GenericGF_1.addOrSubtractGF(1, field.multiply(errorLocations[j], xiInverse))
+									);
+							result[i] = field.multiply(
+								errorEvaluator.evaluateAt(xiInverse),
+								field.inverse(denominator)
+							);
+							if (field.generatorBase !== 0) result[i] = field.multiply(result[i], xiInverse);
+						}
+						return result;
+					}
+					static decode(bytes, twoS) {
+						const outputBytes = new Uint8ClampedArray(bytes.length);
+						outputBytes.set(bytes);
+						const field = new GenericGF_1.default(0x011d, 256, 0), // x^8 + x^4 + x^3 + x^2 + 1
+							poly = new GenericGFPoly_1.default(field, outputBytes),
+							syndromeCoefficients = new Uint8ClampedArray(twoS);
+						let error = false;
+						for (let s = 0; s < twoS; s++) {
+							const evaluation = poly.evaluateAt(field.exp(s + field.generatorBase));
+							syndromeCoefficients[syndromeCoefficients.length - 1 - s] = evaluation;
+							if (evaluation !== 0) error = true;
+						}
+						if (!error) return outputBytes;
+						const syndrome = new GenericGFPoly_1.default(field, syndromeCoefficients);
+						const sigmaOmega = E.runEuclideanAlgorithm(field, field.buildMonomial(twoS, 1), syndrome, twoS);
+						if (sigmaOmega === null) return null;
+						const errorLocations = E.findErrorLocations(field, sigmaOmega[0]);
+						if (errorLocations == null) return null;
+						const errorMagnitudes = E.findErrorMagnitudes(field, sigmaOmega[1], errorLocations);
+						for (let i = 0; i < errorLocations.length; i++) {
+							const position = outputBytes.length - 1 - field.log(errorLocations[i]);
+							if (position < 0) return null;
+							outputBytes[position] = GenericGF_1.addOrSubtractGF(
+								outputBytes[position],
+								errorMagnitudes[i]
+							);
+						}
 						return outputBytes;
 					}
-					var syndrome = new GenericGFPoly_1.default(field, syndromeCoefficients);
-					var sigmaOmega = runEuclideanAlgorithm(field, field.buildMonomial(twoS, 1), syndrome, twoS);
-					if (sigmaOmega === null) {
-						return null;
-					}
-					var errorLocations = findErrorLocations(field, sigmaOmega[0]);
-					if (errorLocations == null) {
-						return null;
-					}
-					var errorMagnitudes = findErrorMagnitudes(field, sigmaOmega[1], errorLocations);
-					for (var i = 0; i < errorLocations.length; i++) {
-						var position = outputBytes.length - 1 - field.log(errorLocations[i]);
-						if (position < 0) {
-							return null;
-						}
-						outputBytes[position] = GenericGF_1.addOrSubtractGF(outputBytes[position], errorMagnitudes[i]);
-					}
-					return outputBytes;
 				}
-				exports.decode = decode;
-
-				/***/
+				exports.decode = E.decode;
 			},
 			/* 10 */
 			/***/ function (module, exports, __webpack_require__) {
