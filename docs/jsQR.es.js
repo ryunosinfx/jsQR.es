@@ -2957,8 +2957,7 @@
 					static findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, bottomLeft) {
 						// Now that we've found the three finder patterns we can determine the blockSize and the size of the QR code.
 						// We'll use these to help find the alignment pattern but also later when we do the extraction.
-						let dimension;
-						let moduleSize;
+						let dimension, moduleSize;
 						try {
 							const _a = M.computeDimension(topLeft, topRight, bottomLeft, matrix);
 							dimension = _a.dimension;
