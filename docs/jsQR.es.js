@@ -100,8 +100,9 @@
 						return new BitMatrix(new Uint8ClampedArray(width * height), width);
 					}
 					get(x, y) {
-						if (x < 0 || x >= this.width || y < 0 || y >= this.height) return false;
-						return !!this.data[y * this.width + x];
+						return x < 0 || x >= this.width || y < 0 || y >= this.height
+							? false
+							: !!this.data[y * this.width + x];
 					}
 					set(x, y, v) {
 						this.data[y * this.width + x] = v ? 1 : 0;
@@ -2579,517 +2580,427 @@
 				'use strict';
 
 				Object.defineProperty(exports, '__esModule', { value: true });
-				var MAX_FINDERPATTERNS_TO_SEARCH = 4;
-				var MIN_QUAD_RATIO = 0.5;
-				var MAX_QUAD_RATIO = 1.5;
-				var distance = function (a, b) {
-					return Math.sqrt(Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2));
-				};
-				function sum(values) {
-					return values.reduce(function (a, b) {
-						return a + b;
-					});
-				}
-				// Takes three finder patterns and organizes them into topLeft, topRight, etc
-				function reorderFinderPatterns(pattern1, pattern2, pattern3) {
-					var _a, _b, _c, _d;
-					// Find distances between pattern centers
-					var oneTwoDistance = distance(pattern1, pattern2);
-					var twoThreeDistance = distance(pattern2, pattern3);
-					var oneThreeDistance = distance(pattern1, pattern3);
-					var bottomLeft;
-					var topLeft;
-					var topRight;
-					// Assume one closest to other two is B; A and C will just be guesses at first
-					if (twoThreeDistance >= oneTwoDistance && twoThreeDistance >= oneThreeDistance) {
-						(_a = [pattern2, pattern1, pattern3]),
-							(bottomLeft = _a[0]),
-							(topLeft = _a[1]),
-							(topRight = _a[2]);
-					} else if (oneThreeDistance >= twoThreeDistance && oneThreeDistance >= oneTwoDistance) {
-						(_b = [pattern1, pattern2, pattern3]),
-							(bottomLeft = _b[0]),
-							(topLeft = _b[1]),
-							(topRight = _b[2]);
-					} else {
-						(_c = [pattern1, pattern3, pattern2]),
-							(bottomLeft = _c[0]),
-							(topLeft = _c[1]),
-							(topRight = _c[2]);
+				const MAX_FINDERPATTERNS_TO_SEARCH = 4,
+					MIN_QUAD_RATIO = 0.5,
+					MAX_QUAD_RATIO = 1.5;
+				class M {
+					static distance(a, b) {
+						return Math.sqrt(Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2));
 					}
-					// Use cross product to figure out whether bottomLeft (A) and topRight (C) are correct or flipped in relation to topLeft (B)
-					// This asks whether BC x BA has a positive z component, which is the arrangement we want. If it's negative, then
-					// we've got it flipped around and should swap topRight and bottomLeft.
-					if (
-						(topRight.x - topLeft.x) * (bottomLeft.y - topLeft.y) -
-							(topRight.y - topLeft.y) * (bottomLeft.x - topLeft.x) <
-						0
-					) {
-						(_d = [topRight, bottomLeft]), (bottomLeft = _d[0]), (topRight = _d[1]);
+					static sum(values) {
+						return values.reduce((a, b) => a + b);
 					}
-					return { bottomLeft: bottomLeft, topLeft: topLeft, topRight: topRight };
-				}
-				// Computes the dimension (number of modules on a side) of the QR Code based on the position of the finder patterns
-				function computeDimension(topLeft, topRight, bottomLeft, matrix) {
-					var moduleSize =
-						(sum(countBlackWhiteRun(topLeft, bottomLeft, matrix, 5)) / 7 + // Divide by 7 since the ratio is 1:1:3:1:1
-							sum(countBlackWhiteRun(topLeft, topRight, matrix, 5)) / 7 +
-							sum(countBlackWhiteRun(bottomLeft, topLeft, matrix, 5)) / 7 +
-							sum(countBlackWhiteRun(topRight, topLeft, matrix, 5)) / 7) /
-						4;
-					if (moduleSize < 1) {
-						throw new Error('Invalid module size');
-					}
-					var topDimension = Math.round(distance(topLeft, topRight) / moduleSize);
-					var sideDimension = Math.round(distance(topLeft, bottomLeft) / moduleSize);
-					var dimension = Math.floor((topDimension + sideDimension) / 2) + 7;
-					switch (dimension % 4) {
-						case 0:
-							dimension++;
-							break;
-						case 2:
-							dimension--;
-							break;
-					}
-					return { dimension: dimension, moduleSize: moduleSize };
-				}
-				// Takes an origin point and an end point and counts the sizes of the black white run from the origin towards the end point.
-				// Returns an array of elements, representing the pixel size of the black white run.
-				// Uses a variant of http://en.wikipedia.org/wiki/Bresenham's_line_algorithm
-				function countBlackWhiteRunTowardsPoint(origin, end, matrix, length) {
-					var switchPoints = [{ x: Math.floor(origin.x), y: Math.floor(origin.y) }];
-					var steep = Math.abs(end.y - origin.y) > Math.abs(end.x - origin.x);
-					var fromX;
-					var fromY;
-					var toX;
-					var toY;
-					if (steep) {
-						fromX = Math.floor(origin.y);
-						fromY = Math.floor(origin.x);
-						toX = Math.floor(end.y);
-						toY = Math.floor(end.x);
-					} else {
-						fromX = Math.floor(origin.x);
-						fromY = Math.floor(origin.y);
-						toX = Math.floor(end.x);
-						toY = Math.floor(end.y);
-					}
-					var dx = Math.abs(toX - fromX);
-					var dy = Math.abs(toY - fromY);
-					var error = Math.floor(-dx / 2);
-					var xStep = fromX < toX ? 1 : -1;
-					var yStep = fromY < toY ? 1 : -1;
-					var currentPixel = true;
-					// Loop up until x == toX, but not beyond
-					for (var x = fromX, y = fromY; x !== toX + xStep; x += xStep) {
-						// Does current pixel mean we have moved white to black or vice versa?
-						// Scanning black in state 0,2 and white in state 1, so if we find the wrong
-						// color, advance to next state or end if we are in state 2 already
-						var realX = steep ? y : x;
-						var realY = steep ? x : y;
-						if (matrix.get(realX, realY) !== currentPixel) {
-							currentPixel = !currentPixel;
-							switchPoints.push({ x: realX, y: realY });
-							if (switchPoints.length === length + 1) {
-								break;
-							}
+					// Takes three finder patterns and organizes them into topLeft, topRight, etc
+					static reorderFinderPatterns(pattern1, pattern2, pattern3) {
+						const oneTwoDistance = M.distance(pattern1, pattern2), // Find distances between pattern centers
+							twoThreeDistance = M.distance(pattern2, pattern3), // Assume one closest to other two is B; A and C will just be guesses at first
+							oneThreeDistance = M.distance(pattern1, pattern3),
+							_c =
+								twoThreeDistance >= oneTwoDistance && twoThreeDistance >= oneThreeDistance
+									? [pattern2, pattern1, pattern3]
+									: oneThreeDistance >= twoThreeDistance && oneThreeDistance >= oneTwoDistance
+									? [pattern1, pattern2, pattern3]
+									: [pattern1, pattern3, pattern2];
+						const topLeft = _c[1];
+						let bottomLeft = _c[0],
+							topRight = _c[2];
+						// Use cross product to figure out whether bottomLeft (A) and topRight (C) are correct or flipped in relation to topLeft (B)
+						// This asks whether BC x BA has a positive z component, which is the arrangement we want. If it's negative, then
+						// we've got it flipped around and should swap topRight and bottomLeft.
+						if (
+							(topRight.x - topLeft.x) * (bottomLeft.y - topLeft.y) -
+								(topRight.y - topLeft.y) * (bottomLeft.x - topLeft.x) <
+							0
+						) {
+							const _d = [topRight, bottomLeft];
+							bottomLeft = _d[0];
+							topRight = _d[1];
 						}
-						error += dy;
-						if (error > 0) {
-							if (y === toY) {
-								break;
-							}
-							y += yStep;
-							error -= dx;
-						}
+						return { bottomLeft, topLeft, topRight };
 					}
-					var distances = [];
-					for (var i = 0; i < length; i++) {
-						if (switchPoints[i] && switchPoints[i + 1]) {
-							distances.push(distance(switchPoints[i], switchPoints[i + 1]));
-						} else {
-							distances.push(0);
-						}
-					}
-					return distances;
-				}
-				// Takes an origin point and an end point and counts the sizes of the black white run in the origin point
-				// along the line that intersects with the end point. Returns an array of elements, representing the pixel sizes
-				// of the black white run. Takes a length which represents the number of switches from black to white to look for.
-				function countBlackWhiteRun(origin, end, matrix, length) {
-					var _a;
-					var rise = end.y - origin.y;
-					var run = end.x - origin.x;
-					var towardsEnd = countBlackWhiteRunTowardsPoint(origin, end, matrix, Math.ceil(length / 2));
-					var awayFromEnd = countBlackWhiteRunTowardsPoint(
-						origin,
-						{ x: origin.x - run, y: origin.y - rise },
-						matrix,
-						Math.ceil(length / 2)
-					);
-					var middleValue = towardsEnd.shift() + awayFromEnd.shift() - 1; // Substract one so we don't double count a pixel
-					return (_a = awayFromEnd.concat(middleValue)).concat.apply(_a, towardsEnd);
-				}
-				// Takes in a black white run and an array of expected ratios. Returns the average size of the run as well as the "error" -
-				// that is the amount the run diverges from the expected ratio
-				function scoreBlackWhiteRun(sequence, ratios) {
-					var averageSize = sum(sequence) / sum(ratios);
-					var error = 0;
-					ratios.forEach(function (ratio, i) {
-						error += Math.pow(sequence[i] - ratio * averageSize, 2);
-					});
-					return { averageSize: averageSize, error: error };
-				}
-				// Takes an X,Y point and an array of sizes and scores the point against those ratios.
-				// For example for a finder pattern takes the ratio list of 1:1:3:1:1 and checks horizontal, vertical and diagonal ratios
-				// against that.
-				function scorePattern(point, ratios, matrix) {
-					try {
-						var horizontalRun = countBlackWhiteRun(point, { x: -1, y: point.y }, matrix, ratios.length);
-						var verticalRun = countBlackWhiteRun(point, { x: point.x, y: -1 }, matrix, ratios.length);
-						var topLeftPoint = {
-							x: Math.max(0, point.x - point.y) - 1,
-							y: Math.max(0, point.y - point.x) - 1,
-						};
-						var topLeftBottomRightRun = countBlackWhiteRun(point, topLeftPoint, matrix, ratios.length);
-						var bottomLeftPoint = {
-							x: Math.min(matrix.width, point.x + point.y) + 1,
-							y: Math.min(matrix.height, point.y + point.x) + 1,
-						};
-						var bottomLeftTopRightRun = countBlackWhiteRun(point, bottomLeftPoint, matrix, ratios.length);
-						var horzError = scoreBlackWhiteRun(horizontalRun, ratios);
-						var vertError = scoreBlackWhiteRun(verticalRun, ratios);
-						var diagDownError = scoreBlackWhiteRun(topLeftBottomRightRun, ratios);
-						var diagUpError = scoreBlackWhiteRun(bottomLeftTopRightRun, ratios);
-						var ratioError = Math.sqrt(
-							horzError.error * horzError.error +
-								vertError.error * vertError.error +
-								diagDownError.error * diagDownError.error +
-								diagUpError.error * diagUpError.error
-						);
-						var avgSize =
-							(horzError.averageSize +
-								vertError.averageSize +
-								diagDownError.averageSize +
-								diagUpError.averageSize) /
+					static computeDimension(topLeft, topRight, bottomLeft, matrix) {
+						const moduleSize = // Computes the dimension (number of modules on a side) of the QR Code based on the position of the finder patterns
+							(M.sum(M.countBlackWhiteRun(topLeft, bottomLeft, matrix, 5)) / 7 + // Divide by 7 since the ratio is 1:1:3:1:1
+								M.sum(M.countBlackWhiteRun(topLeft, topRight, matrix, 5)) / 7 +
+								M.sum(M.countBlackWhiteRun(bottomLeft, topLeft, matrix, 5)) / 7 +
+								M.sum(M.countBlackWhiteRun(topRight, topLeft, matrix, 5)) / 7) /
 							4;
-						var sizeError =
-							(Math.pow(horzError.averageSize - avgSize, 2) +
-								Math.pow(vertError.averageSize - avgSize, 2) +
-								Math.pow(diagDownError.averageSize - avgSize, 2) +
-								Math.pow(diagUpError.averageSize - avgSize, 2)) /
-							avgSize;
-						return ratioError + sizeError;
-					} catch (_a) {
-						return Infinity;
-					}
-				}
-				function recenterLocation(matrix, p) {
-					var leftX = Math.round(p.x);
-					while (matrix.get(leftX, Math.round(p.y))) {
-						leftX--;
-					}
-					var rightX = Math.round(p.x);
-					while (matrix.get(rightX, Math.round(p.y))) {
-						rightX++;
-					}
-					var x = (leftX + rightX) / 2;
-					var topY = Math.round(p.y);
-					while (matrix.get(Math.round(x), topY)) {
-						topY--;
-					}
-					var bottomY = Math.round(p.y);
-					while (matrix.get(Math.round(x), bottomY)) {
-						bottomY++;
-					}
-					var y = (topY + bottomY) / 2;
-					return { x: x, y: y };
-				}
-				function locate(matrix) {
-					var finderPatternQuads = [];
-					var activeFinderPatternQuads = [];
-					var alignmentPatternQuads = [];
-					var activeAlignmentPatternQuads = [];
-					var _loop_1 = function (y) {
-						var length_1 = 0;
-						var lastBit = false;
-						var scans = [0, 0, 0, 0, 0];
-						var _loop_2 = function (x) {
-							var v = matrix.get(x, y);
-							if (v === lastBit) {
-								length_1++;
-							} else {
-								scans = [scans[1], scans[2], scans[3], scans[4], length_1];
-								length_1 = 1;
-								lastBit = v;
-								// Do the last 5 color changes ~ match the expected ratio for a finder pattern? 1:1:3:1:1 of b:w:b:w:b
-								var averageFinderPatternBlocksize = sum(scans) / 7;
-								var validFinderPattern =
-									Math.abs(scans[0] - averageFinderPatternBlocksize) <
-										averageFinderPatternBlocksize &&
-									Math.abs(scans[1] - averageFinderPatternBlocksize) <
-										averageFinderPatternBlocksize &&
-									Math.abs(scans[2] - 3 * averageFinderPatternBlocksize) <
-										3 * averageFinderPatternBlocksize &&
-									Math.abs(scans[3] - averageFinderPatternBlocksize) <
-										averageFinderPatternBlocksize &&
-									Math.abs(scans[4] - averageFinderPatternBlocksize) <
-										averageFinderPatternBlocksize &&
-									!v; // And make sure the current pixel is white since finder patterns are bordered in white
-								// Do the last 3 color changes ~ match the expected ratio for an alignment pattern? 1:1:1 of w:b:w
-								var averageAlignmentPatternBlocksize = sum(scans.slice(-3)) / 3;
-								var validAlignmentPattern =
-									Math.abs(scans[2] - averageAlignmentPatternBlocksize) <
-										averageAlignmentPatternBlocksize &&
-									Math.abs(scans[3] - averageAlignmentPatternBlocksize) <
-										averageAlignmentPatternBlocksize &&
-									Math.abs(scans[4] - averageAlignmentPatternBlocksize) <
-										averageAlignmentPatternBlocksize &&
-									v; // Is the current pixel black since alignment patterns are bordered in black
-								if (validFinderPattern) {
-									// Compute the start and end x values of the large center black square
-									var endX_1 = x - scans[3] - scans[4];
-									var startX_1 = endX_1 - scans[2];
-									var line = { startX: startX_1, endX: endX_1, y: y };
-									// Is there a quad directly above the current spot? If so, extend it with the new line. Otherwise, create a new quad with
-									// that line as the starting point.
-									var matchingQuads = activeFinderPatternQuads.filter(function (q) {
-										return (
-											(startX_1 >= q.bottom.startX && startX_1 <= q.bottom.endX) ||
-											(endX_1 >= q.bottom.startX && startX_1 <= q.bottom.endX) ||
-											(startX_1 <= q.bottom.startX &&
-												endX_1 >= q.bottom.endX &&
-												scans[2] / (q.bottom.endX - q.bottom.startX) < MAX_QUAD_RATIO &&
-												scans[2] / (q.bottom.endX - q.bottom.startX) > MIN_QUAD_RATIO)
-										);
-									});
-									if (matchingQuads.length > 0) {
-										matchingQuads[0].bottom = line;
-									} else {
-										activeFinderPatternQuads.push({ top: line, bottom: line });
-									}
-								}
-								if (validAlignmentPattern) {
-									// Compute the start and end x values of the center black square
-									var endX_2 = x - scans[4];
-									var startX_2 = endX_2 - scans[3];
-									var line = { startX: startX_2, y: y, endX: endX_2 };
-									// Is there a quad directly above the current spot? If so, extend it with the new line. Otherwise, create a new quad with
-									// that line as the starting point.
-									var matchingQuads = activeAlignmentPatternQuads.filter(function (q) {
-										return (
-											(startX_2 >= q.bottom.startX && startX_2 <= q.bottom.endX) ||
-											(endX_2 >= q.bottom.startX && startX_2 <= q.bottom.endX) ||
-											(startX_2 <= q.bottom.startX &&
-												endX_2 >= q.bottom.endX &&
-												scans[2] / (q.bottom.endX - q.bottom.startX) < MAX_QUAD_RATIO &&
-												scans[2] / (q.bottom.endX - q.bottom.startX) > MIN_QUAD_RATIO)
-										);
-									});
-									if (matchingQuads.length > 0) {
-										matchingQuads[0].bottom = line;
-									} else {
-										activeAlignmentPatternQuads.push({ top: line, bottom: line });
-									}
-								}
-							}
-						};
-						for (var x = -1; x <= matrix.width; x++) {
-							_loop_2(x);
+						if (moduleSize < 1) throw new Error('Invalid module size');
+						const topDimension = Math.round(M.distance(topLeft, topRight) / moduleSize),
+							sideDimension = Math.round(M.distance(topLeft, bottomLeft) / moduleSize),
+							dimension = Math.floor((topDimension + sideDimension) / 2) + 7;
+						switch (dimension % 4) {
+							case 0:
+								dimension++;
+								break;
+							case 2:
+								dimension--;
+								break;
 						}
-						finderPatternQuads.push.apply(
-							finderPatternQuads,
-							activeFinderPatternQuads.filter(function (q) {
-								return q.bottom.y !== y && q.bottom.y - q.top.y >= 2;
-							})
-						);
-						activeFinderPatternQuads = activeFinderPatternQuads.filter(function (q) {
-							return q.bottom.y === y;
-						});
-						alignmentPatternQuads.push.apply(
-							alignmentPatternQuads,
-							activeAlignmentPatternQuads.filter(function (q) {
-								return q.bottom.y !== y;
-							})
-						);
-						activeAlignmentPatternQuads = activeAlignmentPatternQuads.filter(function (q) {
-							return q.bottom.y === y;
-						});
-					};
-					for (var y = 0; y <= matrix.height; y++) {
-						_loop_1(y);
+						return { dimension, moduleSize };
 					}
-					finderPatternQuads.push.apply(
-						finderPatternQuads,
-						activeFinderPatternQuads.filter(function (q) {
-							return q.bottom.y - q.top.y >= 2;
-						})
-					);
-					alignmentPatternQuads.push.apply(alignmentPatternQuads, activeAlignmentPatternQuads);
-					var finderPatternGroups = finderPatternQuads
-						.filter(function (q) {
-							return q.bottom.y - q.top.y >= 2;
-						}) // All quads must be at least 2px tall since the center square is larger than a block
-						.map(function (q) {
-							var x = (q.top.startX + q.top.endX + q.bottom.startX + q.bottom.endX) / 4;
-							var y = (q.top.y + q.bottom.y + 1) / 2;
-							if (!matrix.get(Math.round(x), Math.round(y))) {
-								return;
+					// Takes an origin point and an end point and counts the sizes of the black white run from the origin towards the end point.
+					// Returns an array of elements, representing the pixel size of the black white run.
+					// Uses a variant of http://en.wikipedia.org/wiki/Bresenham's_line_algorithm
+					static countBlackWhiteRunTowardsPoint(origin, end, matrix, length) {
+						const switchPoints = [{ x: Math.floor(origin.x), y: Math.floor(origin.y) }],
+							steep = Math.abs(end.y - origin.y) > Math.abs(end.x - origin.x),
+							fromX = Math.floor(steep ? origin.y : origin.x),
+							fromY = Math.floor(steep ? origin.x : origin.y),
+							toX = Math.floor(steep ? end.y : end.x),
+							toY = Math.floor(steep ? end.x : end.y),
+							dx = Math.abs(toX - fromX),
+							dy = Math.abs(toY - fromY),
+							xStep = fromX < toX ? 1 : -1,
+							yStep = fromY < toY ? 1 : -1;
+						let error = Math.floor(-dx / 2),
+							currentPixel = true; // Loop up until x == toX, but not beyond
+						for (let x = fromX, y = fromY; x !== toX + xStep; x += xStep) {
+							// Does current pixel mean we have moved white to black or vice versa?
+							// Scanning black in state 0,2 and white in state 1, so if we find the wrong
+							// color, advance to next state or end if we are in state 2 already
+							const realX = steep ? y : x;
+							const realY = steep ? x : y;
+							if (matrix.get(realX, realY) !== currentPixel) {
+								currentPixel = !currentPixel;
+								switchPoints.push({ x: realX, y: realY });
+								if (switchPoints.length === length + 1) break;
 							}
-							var lengths = [
-								q.top.endX - q.top.startX,
-								q.bottom.endX - q.bottom.startX,
-								q.bottom.y - q.top.y + 1,
-							];
-							var size = sum(lengths) / lengths.length;
-							var score = scorePattern({ x: Math.round(x), y: Math.round(y) }, [1, 1, 3, 1, 1], matrix);
-							return { score: score, x: x, y: y, size: size };
-						})
-						.filter(function (q) {
-							return !!q;
-						}) // Filter out any rejected quads from above
-						.sort(function (a, b) {
-							return a.score - b.score;
-						})
-						// Now take the top finder pattern options and try to find 2 other options with a similar size.
-						.map(function (point, i, finderPatterns) {
-							if (i > MAX_FINDERPATTERNS_TO_SEARCH) {
-								return null;
+							error += dy;
+							if (error > 0) {
+								if (y === toY) break;
+								y += yStep;
+								error -= dx;
 							}
-							var otherPoints = finderPatterns
-								.filter(function (p, ii) {
-									return i !== ii;
-								})
-								.map(function (p) {
-									return {
-										x: p.x,
-										y: p.y,
-										score: p.score + Math.pow(p.size - point.size, 2) / point.size,
-										size: p.size,
+						}
+						const distances = [];
+						for (let i = 0; i < length; i++)
+							if (switchPoints[i] && switchPoints[i + 1])
+								distances.push(distance(switchPoints[i], switchPoints[i + 1]));
+							else distances.push(0);
+						return distances;
+					}
+					// Takes an origin point and an end point and counts the sizes of the black white run in the origin point
+					// along the line that intersects with the end point. Returns an array of elements, representing the pixel sizes
+					// of the black white run. Takes a length which represents the number of switches from black to white to look for.
+					static countBlackWhiteRun(origin, end, matrix, length) {
+						const rise = end.y - origin.y,
+							run = end.x - origin.x,
+							towardsEnd = M.countBlackWhiteRunTowardsPoint(origin, end, matrix, Math.ceil(length / 2)),
+							awayFromEnd = M.countBlackWhiteRunTowardsPoint(
+								origin,
+								{ x: origin.x - run, y: origin.y - rise },
+								matrix,
+								Math.ceil(length / 2)
+							),
+							middleValue = towardsEnd.shift() + awayFromEnd.shift() - 1; // Substract one so we don't double count a pixel
+						let _a;
+						return (_a = awayFromEnd.concat(middleValue)).concat.apply(_a, towardsEnd);
+					}
+					// Takes in a black white run and an array of expected ratios. Returns the average size of the run as well as the "error" -
+					// that is the amount the run diverges from the expected ratio
+					static scoreBlackWhiteRun(sequence, ratios) {
+						const averageSize = M.sum(sequence) / M.sum(ratios);
+						let error = 0;
+						ratios.forEach((ratio, i) => {
+							error += Math.pow(sequence[i] - ratio * averageSize, 2);
+						});
+						return { averageSize, error };
+					}
+					// Takes an X,Y point and an array of sizes and scores the point against those ratios.
+					// For example for a finder pattern takes the ratio list of 1:1:3:1:1 and checks horizontal, vertical and diagonal ratios
+					// against that.
+					static scorePattern(point, ratios, matrix) {
+						try {
+							const horizontalRun = M.countBlackWhiteRun(
+									point,
+									{ x: -1, y: point.y },
+									matrix,
+									ratios.length
+								),
+								verticalRun = M.countBlackWhiteRun(point, { x: point.x, y: -1 }, matrix, ratios.length),
+								topLeftPoint = {
+									x: Math.max(0, point.x - point.y) - 1,
+									y: Math.max(0, point.y - point.x) - 1,
+								},
+								topLeftBottomRightRun = M.countBlackWhiteRun(
+									point,
+									topLeftPoint,
+									matrix,
+									ratios.length
+								),
+								bottomLeftPoint = {
+									x: Math.min(matrix.width, point.x + point.y) + 1,
+									y: Math.min(matrix.height, point.y + point.x) + 1,
+								},
+								bottomLeftTopRightRun = M.countBlackWhiteRun(
+									point,
+									bottomLeftPoint,
+									matrix,
+									ratios.length
+								),
+								horzError = M.scoreBlackWhiteRun(horizontalRun, ratios),
+								vertError = M.scoreBlackWhiteRun(verticalRun, ratios),
+								diagDownError = M.scoreBlackWhiteRun(topLeftBottomRightRun, ratios),
+								diagUpError = M.scoreBlackWhiteRun(bottomLeftTopRightRun, ratios),
+								ratioError = Math.sqrt(
+									horzError.error * horzError.error +
+										vertError.error * vertError.error +
+										diagDownError.error * diagDownError.error +
+										diagUpError.error * diagUpError.error
+								),
+								avgSize =
+									(horzError.averageSize +
+										vertError.averageSize +
+										diagDownError.averageSize +
+										diagUpError.averageSize) /
+									4,
+								sizeError =
+									(Math.pow(horzError.averageSize - avgSize, 2) +
+										Math.pow(vertError.averageSize - avgSize, 2) +
+										Math.pow(diagDownError.averageSize - avgSize, 2) +
+										Math.pow(diagUpError.averageSize - avgSize, 2)) /
+									avgSize;
+							return ratioError + sizeError;
+						} catch (_a) {
+							return Infinity;
+						}
+					}
+					static recenterLocation(matrix, p) {
+						let leftX = Math.round(p.x);
+						while (matrix.get(leftX, Math.round(p.y))) leftX--;
+						let rightX = Math.round(p.x);
+						while (matrix.get(rightX, Math.round(p.y))) rightX++;
+						const x = (leftX + rightX) / 2;
+						let topY = Math.round(p.y);
+						while (matrix.get(Math.round(x), topY)) topY--;
+						let bottomY = Math.round(p.y);
+						while (matrix.get(Math.round(x), bottomY)) bottomY++;
+						const y = (topY + bottomY) / 2;
+						return { x, y };
+					}
+					static locate(matrix) {
+						const fPQ = [], //finderPatternQuads
+							aFPQ = [], //activeFinderPatternQuads
+							aPQ = [], //alignmentPatternQuads
+							aAPQ = [], //activeAlignmentPatternQuads
+							_loop_1 = (y) => {
+								let length_1 = 0,
+									lastBit = false;
+								const scans = [0, 0, 0, 0, 0],
+									_loop_2 = (x) => {
+										const v = matrix.get(x, y);
+										if (v === lastBit) length_1++;
+										else {
+											scans = [scans[1], scans[2], scans[3], scans[4], length_1];
+											length_1 = 1;
+											lastBit = v;
+											// Do the last 5 color changes ~ match the expected ratio for a finder pattern? 1:1:3:1:1 of b:w:b:w:b
+											const aFPB = M.sum(scans) / 7, //averageFinderPatternBlocksize
+												validFinderPattern =
+													Math.abs(scans[0] - aFPB) < aFPB &&
+													Math.abs(scans[1] - aFPB) < aFPB &&
+													Math.abs(scans[2] - 3 * aFPB) < 3 * aFPB &&
+													Math.abs(scans[3] - aFPB) < aFPB &&
+													Math.abs(scans[4] - aFPB) < aFPB &&
+													!v, // And make sure the current pixel is white since finder patterns are bordered in white
+												// Do the last 3 color changes ~ match the expected ratio for an alignment pattern? 1:1:1 of w:b:w
+												aAPB = M.sum(scans.slice(-3)) / 3, //averageAlignmentPatternBlocksize
+												validAlignmentPattern =
+													Math.abs(scans[2] - aAPB) < aAPB &&
+													Math.abs(scans[3] - aAPB) < aAPB &&
+													Math.abs(scans[4] - aAPB) < aAPB &&
+													v; // Is the current pixel black since alignment patterns are bordered in black
+											if (validFinderPattern) {
+												// Compute the start and end x values of the large center black square
+												var endX_1 = x - scans[3] - scans[4];
+												var startX_1 = endX_1 - scans[2];
+												var line = { startX: startX_1, endX: endX_1, y: y };
+												// Is there a quad directly above the current spot? If so, extend it with the new line. Otherwise, create a new quad with
+												// that line as the starting point.
+												var matchingQuads = aFPQ.filter(function (q) {
+													return (
+														(startX_1 >= q.bottom.startX && startX_1 <= q.bottom.endX) ||
+														(endX_1 >= q.bottom.startX && startX_1 <= q.bottom.endX) ||
+														(startX_1 <= q.bottom.startX &&
+															endX_1 >= q.bottom.endX &&
+															scans[2] / (q.bottom.endX - q.bottom.startX) <
+																MAX_QUAD_RATIO &&
+															scans[2] / (q.bottom.endX - q.bottom.startX) >
+																MIN_QUAD_RATIO)
+													);
+												});
+												if (matchingQuads.length > 0) matchingQuads[0].bottom = line;
+												else aFPQ.push({ top: line, bottom: line });
+											}
+											if (validAlignmentPattern) {
+												const endX_2 = x - scans[4], // Compute the start and end x values of the center black square
+													startX_2 = endX_2 - scans[3],
+													line = { startX: startX_2, y, endX: endX_2 },
+													// Is there a quad directly above the current spot? If so, extend it with the new line. Otherwise, create a new quad with
+													// that line as the starting point.
+													matchingQuads = aAPQ.filter(
+														(q) =>
+															(startX_2 >= q.bottom.startX &&
+																startX_2 <= q.bottom.endX) ||
+															(endX_2 >= q.bottom.startX && startX_2 <= q.bottom.endX) ||
+															(startX_2 <= q.bottom.startX &&
+																endX_2 >= q.bottom.endX &&
+																scans[2] / (q.bottom.endX - q.bottom.startX) <
+																	MAX_QUAD_RATIO &&
+																scans[2] / (q.bottom.endX - q.bottom.startX) >
+																	MIN_QUAD_RATIO)
+													);
+												if (matchingQuads.length > 0) matchingQuads[0].bottom = line;
+												else aAPQ.push({ top: line, bottom: line });
+											}
+										}
 									};
+								for (let x = -1; x <= matrix.width; x++) _loop_2(x);
+								fPQ.push.apply(
+									fPQ,
+									aFPQ.filter((q) => q.bottom.y !== y && q.bottom.y - q.top.y >= 2)
+								);
+								aFPQ = aFPQ.filter((q) => q.bottom.y === y);
+								aPQ.push.apply(
+									aPQ,
+									aAPQ.filter((q) => q.bottom.y !== y)
+								);
+								aAPQ = aAPQ.filter((q) => q.bottom.y === y);
+							};
+						for (let y = 0; y <= matrix.height; y++) _loop_1(y);
+						fPQ.push.apply(
+							fPQ,
+							aFPQ.filter((q) => q.bottom.y - q.top.y >= 2)
+						);
+						aPQ.push.apply(aPQ, aAPQ);
+						const fPG = fPQ //finderPatternGroups
+							.filter((q) => q.bottom.y - q.top.y >= 2) // All quads must be at least 2px tall since the center square is larger than a block
+							.map((q) => {
+								const x = (q.top.startX + q.top.endX + q.bottom.startX + q.bottom.endX) / 4,
+									y = (q.top.y + q.bottom.y + 1) / 2;
+								if (!matrix.get(Math.round(x), Math.round(y))) return;
+								const lengths = [
+										q.top.endX - q.top.startX,
+										q.bottom.endX - q.bottom.startX,
+										q.bottom.y - q.top.y + 1,
+									],
+									size = M.sum(lengths) / lengths.length,
+									score = M.scorePattern(
+										{ x: Math.round(x), y: Math.round(y) },
+										[1, 1, 3, 1, 1],
+										matrix
+									);
+								return { score, x, y, size };
+							})
+							.filter((q) => !!q) // Filter out any rejected quads from above
+							.sort((a, b) => a.score - b.score)
+							.map((point, i, finderPatterns) => {
+								if (i > MAX_FINDERPATTERNS_TO_SEARCH) return null; // Now take the top finder pattern options and try to find 2 other options with a similar size.
+								const otherPoints = finderPatterns
+									.filter((p, ii) => i !== ii)
+									.map((p) => {
+										return {
+											x: p.x,
+											y: p.y,
+											score: p.score + Math.pow(p.size - point.size, 2) / point.size,
+											size: p.size,
+										};
+									})
+									.sort((a, b) => a.score - b.score);
+								if (otherPoints.length < 2) return null;
+								const score = point.score + otherPoints[0].score + otherPoints[1].score;
+								return { points: [point].concat(otherPoints.slice(0, 2)), score };
+							})
+							.filter((q) => !!q) // Filter out any rejected finder patterns from above
+							.sort((a, b) => a.score - b.score);
+						if (fPG.length === 0) return null;
+						const _a = M.reorderFinderPatterns(fPG[0].points[0], fPG[0].points[1], fPG[0].points[2]),
+							topRight = _a.topRight,
+							topLeft = _a.topLeft,
+							bottomLeft = _a.bottomLeft,
+							alignment = M.findAlignmentPattern(matrix, aPQ, topRight, topLeft, bottomLeft),
+							result = [];
+						if (alignment)
+							result.push({
+								alignmentPattern: { x: alignment.alignmentPattern.x, y: alignment.alignmentPattern.y },
+								bottomLeft: { x: bottomLeft.x, y: bottomLeft.y },
+								dimension: alignment.dimension,
+								topLeft: { x: topLeft.x, y: topLeft.y },
+								topRight: { x: topRight.x, y: topRight.y },
+							});
+						// We normally use the center of the quads as the location of the tracking points, which is optimal for most cases and will account
+						// for a skew in the image. However, In some cases, a slight skew might not be real and instead be caused by image compression
+						// errors and/or low resolution. For those cases, we'd be better off centering the point exactly in the middle of the black area. We
+						// compute and return the location data for the naively centered points as it is little additional work and allows for multiple
+						// attempts at decoding harder images.
+						const midTopRight = M.recenterLocation(matrix, topRight),
+							midTopLeft = M.recenterLocation(matrix, topLeft),
+							midBottomLeft = M.recenterLocation(matrix, bottomLeft),
+							centeredAlignment = M.findAlignmentPattern(
+								matrix,
+								aPQ,
+								midTopRight,
+								midTopLeft,
+								midBottomLeft
+							);
+						if (centeredAlignment)
+							result.push({
+								alignmentPattern: {
+									x: centeredAlignment.alignmentPattern.x,
+									y: centeredAlignment.alignmentPattern.y,
+								},
+								bottomLeft: { x: midBottomLeft.x, y: midBottomLeft.y },
+								topLeft: { x: midTopLeft.x, y: midTopLeft.y },
+								topRight: { x: midTopRight.x, y: midTopRight.y },
+								dimension: centeredAlignment.dimension,
+							});
+						return result.length === 0 ? null : result;
+					}
+					static findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, bottomLeft) {
+						// Now that we've found the three finder patterns we can determine the blockSize and the size of the QR code.
+						// We'll use these to help find the alignment pattern but also later when we do the extraction.
+						let dimension;
+						let moduleSize;
+						try {
+							const _a = M.computeDimension(topLeft, topRight, bottomLeft, matrix);
+							dimension = _a.dimension;
+							moduleSize = _a.moduleSize;
+						} catch (e) {
+							return null;
+						}
+						const bRFP = {
+								x: topRight.x - topLeft.x + bottomLeft.x, // Now find the alignment pattern
+								y: topRight.y - topLeft.y + bottomLeft.y,
+							}, //bottomRightFinderPattern
+							mBFP = (M.distance(topLeft, bottomLeft) + M.distance(topLeft, topRight)) / 2 / moduleSize, //modulesBetweenFinderPatterns
+							c2TL = 1 - 3 / mBFP, //correctionToTopLeft
+							eAP = {
+								x: topLeft.x + c2TL * (bRFP.x - topLeft.x),
+								y: topLeft.y + c2TL * (bRFP.y - topLeft.y),
+							}, //expectedAlignmentPattern
+							alignmentPatterns = alignmentPatternQuads
+								.map((q) => {
+									const x = (q.top.startX + q.top.endX + q.bottom.startX + q.bottom.endX) / 4,
+										y = (q.top.y + q.bottom.y + 1) / 2;
+									if (!matrix.get(Math.floor(x), Math.floor(y))) return;
+									const sizeScore = M.scorePattern(
+											{ x: Math.floor(x), y: Math.floor(y) },
+											[1, 1, 1],
+											matrix
+										),
+										score = sizeScore + distance({ x: x, y: y }, eAP);
+									return { x, y, score };
 								})
-								.sort(function (a, b) {
-									return a.score - b.score;
-								});
-							if (otherPoints.length < 2) {
-								return null;
-							}
-							var score = point.score + otherPoints[0].score + otherPoints[1].score;
-							return { points: [point].concat(otherPoints.slice(0, 2)), score: score };
-						})
-						.filter(function (q) {
-							return !!q;
-						}) // Filter out any rejected finder patterns from above
-						.sort(function (a, b) {
-							return a.score - b.score;
-						});
-					if (finderPatternGroups.length === 0) {
-						return null;
+								.filter((v) => !!v)
+								.sort((a, b) => a.score - b.score),
+							// If there are less than 15 modules between finder patterns it's a version 1 QR code and as such has no alignmemnt pattern
+							// so we can only use our best guess.
+							alignmentPattern = mBFP >= 15 && alignmentPatterns.length ? alignmentPatterns[0] : eAP;
+						return { alignmentPattern, dimension: dimension };
 					}
-					var _a = reorderFinderPatterns(
-							finderPatternGroups[0].points[0],
-							finderPatternGroups[0].points[1],
-							finderPatternGroups[0].points[2]
-						),
-						topRight = _a.topRight,
-						topLeft = _a.topLeft,
-						bottomLeft = _a.bottomLeft;
-					var alignment = findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, bottomLeft);
-					var result = [];
-					if (alignment) {
-						result.push({
-							alignmentPattern: { x: alignment.alignmentPattern.x, y: alignment.alignmentPattern.y },
-							bottomLeft: { x: bottomLeft.x, y: bottomLeft.y },
-							dimension: alignment.dimension,
-							topLeft: { x: topLeft.x, y: topLeft.y },
-							topRight: { x: topRight.x, y: topRight.y },
-						});
-					}
-					// We normally use the center of the quads as the location of the tracking points, which is optimal for most cases and will account
-					// for a skew in the image. However, In some cases, a slight skew might not be real and instead be caused by image compression
-					// errors and/or low resolution. For those cases, we'd be better off centering the point exactly in the middle of the black area. We
-					// compute and return the location data for the naively centered points as it is little additional work and allows for multiple
-					// attempts at decoding harder images.
-					var midTopRight = recenterLocation(matrix, topRight);
-					var midTopLeft = recenterLocation(matrix, topLeft);
-					var midBottomLeft = recenterLocation(matrix, bottomLeft);
-					var centeredAlignment = findAlignmentPattern(
-						matrix,
-						alignmentPatternQuads,
-						midTopRight,
-						midTopLeft,
-						midBottomLeft
-					);
-					if (centeredAlignment) {
-						result.push({
-							alignmentPattern: {
-								x: centeredAlignment.alignmentPattern.x,
-								y: centeredAlignment.alignmentPattern.y,
-							},
-							bottomLeft: { x: midBottomLeft.x, y: midBottomLeft.y },
-							topLeft: { x: midTopLeft.x, y: midTopLeft.y },
-							topRight: { x: midTopRight.x, y: midTopRight.y },
-							dimension: centeredAlignment.dimension,
-						});
-					}
-					if (result.length === 0) {
-						return null;
-					}
-					return result;
 				}
-				exports.locate = locate;
-				function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, bottomLeft) {
-					var _a;
-					// Now that we've found the three finder patterns we can determine the blockSize and the size of the QR code.
-					// We'll use these to help find the alignment pattern but also later when we do the extraction.
-					var dimension;
-					var moduleSize;
-					try {
-						(_a = computeDimension(topLeft, topRight, bottomLeft, matrix)),
-							(dimension = _a.dimension),
-							(moduleSize = _a.moduleSize);
-					} catch (e) {
-						return null;
-					}
-					// Now find the alignment pattern
-					var bottomRightFinderPattern = {
-						x: topRight.x - topLeft.x + bottomLeft.x,
-						y: topRight.y - topLeft.y + bottomLeft.y,
-					};
-					var modulesBetweenFinderPatterns =
-						(distance(topLeft, bottomLeft) + distance(topLeft, topRight)) / 2 / moduleSize;
-					var correctionToTopLeft = 1 - 3 / modulesBetweenFinderPatterns;
-					var expectedAlignmentPattern = {
-						x: topLeft.x + correctionToTopLeft * (bottomRightFinderPattern.x - topLeft.x),
-						y: topLeft.y + correctionToTopLeft * (bottomRightFinderPattern.y - topLeft.y),
-					};
-					var alignmentPatterns = alignmentPatternQuads
-						.map(function (q) {
-							var x = (q.top.startX + q.top.endX + q.bottom.startX + q.bottom.endX) / 4;
-							var y = (q.top.y + q.bottom.y + 1) / 2;
-							if (!matrix.get(Math.floor(x), Math.floor(y))) {
-								return;
-							}
-							var sizeScore = scorePattern({ x: Math.floor(x), y: Math.floor(y) }, [1, 1, 1], matrix);
-							var score = sizeScore + distance({ x: x, y: y }, expectedAlignmentPattern);
-							return { x: x, y: y, score: score };
-						})
-						.filter(function (v) {
-							return !!v;
-						})
-						.sort(function (a, b) {
-							return a.score - b.score;
-						});
-					// If there are less than 15 modules between finder patterns it's a version 1 QR code and as such has no alignmemnt pattern
-					// so we can only use our best guess.
-					var alignmentPattern =
-						modulesBetweenFinderPatterns >= 15 && alignmentPatterns.length
-							? alignmentPatterns[0]
-							: expectedAlignmentPattern;
-					return { alignmentPattern: alignmentPattern, dimension: dimension };
-				}
-
-				/***/
+				exports.locate = M.locate;
 			},
 			/******/
 		]
