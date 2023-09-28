@@ -1053,8 +1053,8 @@
 				'use strict';
 
 				Object.defineProperty(exports, '__esModule', { value: true });
-				var GenericGF_1 = __webpack_require__(1);
-				var GenericGFPoly_1 = __webpack_require__(2);
+				const GenericGF_1 = __webpack_require__(1),
+					GenericGFPoly_1 = __webpack_require__(2);
 				class E {
 					static runEuclideanAlgorithm(field, a, b, R) {
 						let _a;
@@ -1082,7 +1082,7 @@
 							t = q.multiplyPoly(tLast).addOrSubtract(tLastLast);
 							if (r.degree() >= rLast.degree()) return null;
 						}
-						var sigmaTildeAtZero = t.getCoefficient(0);
+						const sigmaTildeAtZero = t.getCoefficient(0);
 						if (sigmaTildeAtZero === 0) return null;
 						const inverse = field.inverse(sigmaTildeAtZero);
 						return [t.multiply(inverse), r.multiply(inverse)];
@@ -2470,110 +2470,107 @@
 				'use strict';
 
 				Object.defineProperty(exports, '__esModule', { value: true });
-				var BitMatrix_1 = __webpack_require__(0);
-				function squareToQuadrilateral(p1, p2, p3, p4) {
-					var dx3 = p1.x - p2.x + p3.x - p4.x;
-					var dy3 = p1.y - p2.y + p3.y - p4.y;
-					if (dx3 === 0 && dy3 === 0) {
-						// Affine
-						return {
-							a11: p2.x - p1.x,
-							a12: p2.y - p1.y,
-							a13: 0,
-							a21: p3.x - p2.x,
-							a22: p3.y - p2.y,
-							a23: 0,
-							a31: p1.x,
-							a32: p1.y,
-							a33: 1,
-						};
-					} else {
-						var dx1 = p2.x - p3.x;
-						var dx2 = p4.x - p3.x;
-						var dy1 = p2.y - p3.y;
-						var dy2 = p4.y - p3.y;
-						var denominator = dx1 * dy2 - dx2 * dy1;
-						var a13 = (dx3 * dy2 - dx2 * dy3) / denominator;
-						var a23 = (dx1 * dy3 - dx3 * dy1) / denominator;
-						return {
-							a11: p2.x - p1.x + a13 * p2.x,
-							a12: p2.y - p1.y + a13 * p2.y,
-							a13: a13,
-							a21: p4.x - p1.x + a23 * p4.x,
-							a22: p4.y - p1.y + a23 * p4.y,
-							a23: a23,
-							a31: p1.x,
-							a32: p1.y,
-							a33: 1,
-						};
-					}
-				}
-				function quadrilateralToSquare(p1, p2, p3, p4) {
-					// Here, the adjoint serves as the inverse:
-					var sToQ = squareToQuadrilateral(p1, p2, p3, p4);
-					return {
-						a11: sToQ.a22 * sToQ.a33 - sToQ.a23 * sToQ.a32,
-						a12: sToQ.a13 * sToQ.a32 - sToQ.a12 * sToQ.a33,
-						a13: sToQ.a12 * sToQ.a23 - sToQ.a13 * sToQ.a22,
-						a21: sToQ.a23 * sToQ.a31 - sToQ.a21 * sToQ.a33,
-						a22: sToQ.a11 * sToQ.a33 - sToQ.a13 * sToQ.a31,
-						a23: sToQ.a13 * sToQ.a21 - sToQ.a11 * sToQ.a23,
-						a31: sToQ.a21 * sToQ.a32 - sToQ.a22 * sToQ.a31,
-						a32: sToQ.a12 * sToQ.a31 - sToQ.a11 * sToQ.a32,
-						a33: sToQ.a11 * sToQ.a22 - sToQ.a12 * sToQ.a21,
-					};
-				}
-				function times(a, b) {
-					return {
-						a11: a.a11 * b.a11 + a.a21 * b.a12 + a.a31 * b.a13,
-						a12: a.a12 * b.a11 + a.a22 * b.a12 + a.a32 * b.a13,
-						a13: a.a13 * b.a11 + a.a23 * b.a12 + a.a33 * b.a13,
-						a21: a.a11 * b.a21 + a.a21 * b.a22 + a.a31 * b.a23,
-						a22: a.a12 * b.a21 + a.a22 * b.a22 + a.a32 * b.a23,
-						a23: a.a13 * b.a21 + a.a23 * b.a22 + a.a33 * b.a23,
-						a31: a.a11 * b.a31 + a.a21 * b.a32 + a.a31 * b.a33,
-						a32: a.a12 * b.a31 + a.a22 * b.a32 + a.a32 * b.a33,
-						a33: a.a13 * b.a31 + a.a23 * b.a32 + a.a33 * b.a33,
-					};
-				}
-				function extract(image, location) {
-					var qToS = quadrilateralToSquare(
-						{ x: 3.5, y: 3.5 },
-						{ x: location.dimension - 3.5, y: 3.5 },
-						{ x: location.dimension - 6.5, y: location.dimension - 6.5 },
-						{ x: 3.5, y: location.dimension - 3.5 }
-					);
-					var sToQ = squareToQuadrilateral(
-						location.topLeft,
-						location.topRight,
-						location.alignmentPattern,
-						location.bottomLeft
-					);
-					var transform = times(sToQ, qToS);
-					var matrix = BitMatrix_1.BitMatrix.createEmpty(location.dimension, location.dimension);
-					var mappingFunction = function (x, y) {
-						var denominator = transform.a13 * x + transform.a23 * y + transform.a33;
-						return {
-							x: (transform.a11 * x + transform.a21 * y + transform.a31) / denominator,
-							y: (transform.a12 * x + transform.a22 * y + transform.a32) / denominator,
-						};
-					};
-					for (var y = 0; y < location.dimension; y++) {
-						for (var x = 0; x < location.dimension; x++) {
-							var xValue = x + 0.5;
-							var yValue = y + 0.5;
-							var sourcePixel = mappingFunction(xValue, yValue);
-							matrix.set(x, y, image.get(Math.floor(sourcePixel.x), Math.floor(sourcePixel.y)));
+				const BitMatrix_1 = __webpack_require__(0);
+				class S {
+					static squareToQuadrilateral(p1, p2, p3, p4) {
+						const dx3 = p1.x - p2.x + p3.x - p4.x,
+							dy3 = p1.y - p2.y + p3.y - p4.y;
+						if (dx3 === 0 && dy3 === 0)
+							return {
+								a11: p2.x - p1.x, // Affine
+								a12: p2.y - p1.y,
+								a13: 0,
+								a21: p3.x - p2.x,
+								a22: p3.y - p2.y,
+								a23: 0,
+								a31: p1.x,
+								a32: p1.y,
+								a33: 1,
+							};
+						else {
+							const dx1 = p2.x - p3.x,
+								dx2 = p4.x - p3.x,
+								dy1 = p2.y - p3.y,
+								dy2 = p4.y - p3.y,
+								denominator = dx1 * dy2 - dx2 * dy1,
+								a13 = (dx3 * dy2 - dx2 * dy3) / denominator,
+								a23 = (dx1 * dy3 - dx3 * dy1) / denominator;
+							return {
+								a11: p2.x - p1.x + a13 * p2.x,
+								a12: p2.y - p1.y + a13 * p2.y,
+								a13: a13,
+								a21: p4.x - p1.x + a23 * p4.x,
+								a22: p4.y - p1.y + a23 * p4.y,
+								a23: a23,
+								a31: p1.x,
+								a32: p1.y,
+								a33: 1,
+							};
 						}
 					}
-					return {
-						matrix: matrix,
-						mappingFunction: mappingFunction,
-					};
+					static quadrilateralToSquare(p1, p2, p3, p4) {
+						const sToQ = S.squareToQuadrilateral(p1, p2, p3, p4); // Here, the adjoint serves as the inverse:
+						return {
+							a11: sToQ.a22 * sToQ.a33 - sToQ.a23 * sToQ.a32,
+							a12: sToQ.a13 * sToQ.a32 - sToQ.a12 * sToQ.a33,
+							a13: sToQ.a12 * sToQ.a23 - sToQ.a13 * sToQ.a22,
+							a21: sToQ.a23 * sToQ.a31 - sToQ.a21 * sToQ.a33,
+							a22: sToQ.a11 * sToQ.a33 - sToQ.a13 * sToQ.a31,
+							a23: sToQ.a13 * sToQ.a21 - sToQ.a11 * sToQ.a23,
+							a31: sToQ.a21 * sToQ.a32 - sToQ.a22 * sToQ.a31,
+							a32: sToQ.a12 * sToQ.a31 - sToQ.a11 * sToQ.a32,
+							a33: sToQ.a11 * sToQ.a22 - sToQ.a12 * sToQ.a21,
+						};
+					}
+					static times(a, b) {
+						return {
+							a11: a.a11 * b.a11 + a.a21 * b.a12 + a.a31 * b.a13,
+							a12: a.a12 * b.a11 + a.a22 * b.a12 + a.a32 * b.a13,
+							a13: a.a13 * b.a11 + a.a23 * b.a12 + a.a33 * b.a13,
+							a21: a.a11 * b.a21 + a.a21 * b.a22 + a.a31 * b.a23,
+							a22: a.a12 * b.a21 + a.a22 * b.a22 + a.a32 * b.a23,
+							a23: a.a13 * b.a21 + a.a23 * b.a22 + a.a33 * b.a23,
+							a31: a.a11 * b.a31 + a.a21 * b.a32 + a.a31 * b.a33,
+							a32: a.a12 * b.a31 + a.a22 * b.a32 + a.a32 * b.a33,
+							a33: a.a13 * b.a31 + a.a23 * b.a32 + a.a33 * b.a33,
+						};
+					}
+					static extract(image, location) {
+						const qToS = S.quadrilateralToSquare(
+								{ x: 3.5, y: 3.5 },
+								{ x: location.dimension - 3.5, y: 3.5 },
+								{ x: location.dimension - 6.5, y: location.dimension - 6.5 },
+								{ x: 3.5, y: location.dimension - 3.5 }
+							),
+							sToQ = S.squareToQuadrilateral(
+								location.topLeft,
+								location.topRight,
+								location.alignmentPattern,
+								location.bottomLeft
+							),
+							transform = S.times(sToQ, qToS),
+							matrix = BitMatrix_1.BitMatrix.createEmpty(location.dimension, location.dimension),
+							mappingFunction = (x, y) => {
+								const denominator = transform.a13 * x + transform.a23 * y + transform.a33;
+								return {
+									x: (transform.a11 * x + transform.a21 * y + transform.a31) / denominator,
+									y: (transform.a12 * x + transform.a22 * y + transform.a32) / denominator,
+								};
+							};
+						for (let y = 0; y < location.dimension; y++)
+							for (let x = 0; x < location.dimension; x++) {
+								const xValue = x + 0.5,
+									yValue = y + 0.5,
+									sourcePixel = mappingFunction(xValue, yValue);
+								matrix.set(x, y, image.get(Math.floor(sourcePixel.x), Math.floor(sourcePixel.y)));
+							}
+						return {
+							matrix: matrix,
+							mappingFunction: mappingFunction,
+						};
+					}
 				}
-				exports.extract = extract;
-
-				/***/
+				exports.extract = S.extract;
 			},
 			/* 12 */
 			/***/ function (module, exports, __webpack_require__) {
