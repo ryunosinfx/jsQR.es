@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=480,initial-scale=1.5" />
+    <title>TEST jsQR</title>
+    <script src="./setting.Compress.js"></script>
+    <script src="./jsQR.js" type=""></script>
+    <script src="./qrcode.es.js" type="module"></script>
+    <script src="./Test.js" type="module"></script>
+    <style>
+        div.s {
+            font-size: 50%;
+            ;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>TEST jsQR<h1>
+            <div>
+                <div id="main">
+                    <div id="qr">
+                    </div>
+                    <div id="qr2">
+                    </div>
+                    <div id="r" class="s">
+                    </div>
+                </div>
+            </div>
+            <script type="module">
+                import { CanvasQRCode } from "./qrcode.js";
+                import { Test } from "./Test.js";
+                const qr = document.getElementById("qr");
+                new CanvasQRCode(qr);
+                const a = async () => {
+                    const tested = await Test.exec(document.getElementById("qr2"));
+                    const r = []
+                    for (const d of tested) {
+                        const result = jsQR(d.data, d.s, d.s);
+                        const c = result ? result.binaryData : result;
+                        const t = Test.a2S(c);
+                        r.push({ text: d.text, t, is: (t === d.text) })
+                    }
+                    const elm = document.getElementById("r");
+                    elm.textContent = JSON.stringify(r)
+                }
+                a();
+            </script>
+</body>
+
+</html>
