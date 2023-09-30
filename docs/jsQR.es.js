@@ -3,7 +3,7 @@ class W {
 	static cc = () => document.createElement('canvas');
 	static compess(u8a) {
 		const b = u8a.length,
-			s = W.MC(W.MS(W.MC(b / 3) + 2)),
+			s = Math.ceil(Math.sqrt(Math.ceil(b / 3) + 2)),
 			c = W.cc();
 		c.width = c.height = s;
 		const x = c.getContext('2d'),
@@ -141,21 +141,14 @@ class W {
 	}
 	static concat = (base, add) => Array.prototype.push.apply(base, add);
 	static A = (s) => new Array(s);
-	static MC = (n) => Math.ceil(n);
 	static MF = (n) => Math.floor(n);
-	static MP = (x, y) => Math.pow(x, y);
-	static MR = (x) => Math.round(x);
-	static MS = (x) => Math.sqrt(x);
-	static MA = (x) => Math.abs(x);
-	static MI = (x) => Math.min(x);
-	static MX = (x) => Math.max(x);
 }
 /*0 BitMatrix*/
 class BM {
-	constructor(data, w) {
+	constructor(d, w) {
 		this.width = w;
-		this.height = data.length / w;
-		this.data = data;
+		this.height = d.length / w;
+		this.data = d;
 	}
 	static createEmpty = (w, h) => new BM(W.u8ca(w * h), w); //width,height
 	get(x, y) {
@@ -357,7 +350,7 @@ class RS {
 			sC = W.u8ca(twoS); //syndromeCoefficients
 		let e = false; //error
 		for (let s = 0; s < twoS; s++) {
-			const e = p.evaluateAt(f.exp(s + f.generatorBase)); //evaluation
+			e = p.evaluateAt(f.exp(s + f.generatorBase)); //evaluation
 			sC[sC.length - 1 - s] = e;
 			if (e !== 0) e = true;
 		}
@@ -404,8 +397,8 @@ class BZ {
 				gP.set(x, y, 0.2126 * r + 0.7152 * g + 0.0722 * b);
 			}
 		const RS = BZ.REGION_SIZE,
-			hRC = W.MC(w / RS), //horizontalRegionCount
-			vRC = W.MC(h / RS), //verticalRegionCount
+			hRC = Math.ceil(w / RS), //horizontalRegionCount
+			vRC = Math.ceil(h / RS), //verticalRegionCount
 			bP = new Mtx(hRC, vRC); //blackPoints
 		for (let vR = 0; vR < vRC; vR++) {
 			for (let hR = 0; hR < hRC; hR++) {
@@ -416,10 +409,10 @@ class BZ {
 					for (let x = 0; x < RS; x++) {
 						let pL = gP.get(hR * RS + x, vR * RS + y); //pixelLumosity
 						sum += pL;
-						min = W.MI(min, pL);
-						max = W.MX(max, pL);
+						min = Math.min(min, pL);
+						max = Math.max(max, pL);
 					}
-				let avg = sum / W.MP(RS, 2);
+				let avg = sum / Math.pow(RS, 2);
 				if (max - min <= BZ.MIN_DYNAMIC_RANGE) {
 					// If variation within the block is low, assume this is a block with only light or only
 					// dark pixels. In that case we do not want to use the average, as it would divide this
@@ -523,13 +516,13 @@ class DD {
 		ECI: 7,
 		7: 'ECI',
 	};
-	static decodeNumeric(stream, size) {
+	static decodeNumeric(strm, size) {
 		const b = [], //bytes
 			cCS = [10, 12, 14][size]; //characterCountSize
 		let t = '',
-			l = stream.readBits(cCS);
+			l = strm.readBits(cCS);
 		while (l >= 3) {
-			const n = stream.readBits(10); // num// Read digits in groups of 3
+			const n = strm.readBits(10); // num// Read digits in groups of 3
 			if (n >= 1000) W.e('Invalid numeric value above 999');
 			const a = W.MF(n / 100),
 				b = W.MF(n / 10) % 10,
@@ -539,14 +532,14 @@ class DD {
 			l -= 3;
 		}
 		if (l === 2) {
-			const n = stream.readBits(7); // num// If the number of digits aren't a multiple of 3, the remaining digits are special cased.
+			const n = strm.readBits(7); // num// If the number of digits aren't a multiple of 3, the remaining digits are special cased.
 			if (n >= 100) W.e('Invalid numeric value above 99');
 			const a = W.MF(n / 10),
 				b = n % 10;
 			b.push(48 + a, 48 + b);
 			t += a.toString() + b.toString();
 		} else if (l === 1) {
-			const n = stream.readBits(4); // num
+			const n = strm.readBits(4); // num
 			if (n >= 10) W.e('Invalid numeric value above 9');
 			b.push(48 + n);
 			t += n.toString();
@@ -554,14 +547,14 @@ class DD {
 		return { bytes: b, text: t };
 	}
 	static ACC = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:'.split(''); //AlphanumericCharacterCodes
-	static decodeAlphanumeric(stream, size) {
+	static decodeAlphanumeric(strm, size) {
 		const b = [], //bytes
 			cCS = [9, 11, 13][size], //characterCountSize
 			ACC = DD.ACC;
 		let t = '',
-			l = stream.readBits(cCS);
+			l = strm.readBits(cCS);
 		while (l >= 2) {
-			const v = stream.readBits(11),
+			const v = strm.readBits(11),
 				a = W.MF(v / 45),
 				b = v % 45;
 			b.push(ACC[a].charCodeAt(0), ACC[b].charCodeAt(0));
@@ -569,18 +562,18 @@ class DD {
 			l -= 2;
 		}
 		if (l === 1) {
-			const a = stream.readBits(6);
+			const a = strm.readBits(6);
 			b.push(ACC[a].charCodeAt(0));
 			t += ACC[a];
 		}
 		return { bytes: b, text: t };
 	}
-	static decodeByte(stream, size) {
+	static decodeByte(strm, size) {
 		const b = [], //bytes
 			cCS = [8, 16, 16][size]; //characterCountSize
 		let t = '',
-			l = stream.readBits(cCS);
-		for (let i = 0; i < l; i++) b.push(stream.readBits(8));
+			l = strm.readBits(cCS);
+		for (let i = 0; i < l; i++) b.push(strm.readBits(8));
 		try {
 			t += decodeURIComponent(b.map((b) => '%' + ('0' + b.toString(16)).substr(-2)).join(''));
 		} catch (e) {
@@ -588,13 +581,13 @@ class DD {
 		}
 		return { bytes: b, text: t };
 	}
-	static decodeKanji(stream, size) {
+	static decodeKanji(strm, size) {
 		const b = [], //bytes
 			cCS = [8, 10, 12][size]; //characterCountSize
 		let t = '',
-			l = stream.readBits(cCS);
+			l = strm.readBits(cCS);
 		for (let i = 0; i < l; i++) {
-			const k = stream.readBits(13);
+			const k = strm.readBits(13);
 			let c = (W.MF(k / 0xc0) << 8) | k % 0xc0;
 			c += c < 0x1f00 ? 0x8140 : 0xc140;
 			b.push(c >> 8, c & 0xff);
@@ -983,9 +976,9 @@ class EX {
 			};
 		for (let y = 0; y < loc.dimension; y++)
 			for (let x = 0; x < loc.dimension; x++) {
-				const xValue = x + 0.5,
-					yValue = y + 0.5,
-					sP = mF(xValue, yValue); //sourcePixel
+				const xV = x + 0.5,
+					yV = y + 0.5,
+					sP = mF(xV, yV); //sourcePixel
 				m.set(x, y, img.get(W.MF(sP.x), W.MF(sP.y)));
 			}
 		return {
@@ -999,7 +992,7 @@ class LC {
 	static MAX_FINDERPATTERNS_TO_SEARCH = 4;
 	static MIN_QUAD_RATIO = 0.5;
 	static MAX_QUAD_RATIO = 1.5;
-	static distance = (a, b) => W.MS(W.MP(b.x - a.x, 2) + W.MP(b.y - a.y, 2));
+	static distance = (a, b) => Math.sqrt(Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2));
 	static sum = (vals) => vals.reduce((a, b) => a + b);
 	// Takes three finder patterns and organizes them into topLeft, topRight, etc
 	static reorderFinderPatterns(p1, p2, p3) {
@@ -1028,36 +1021,36 @@ class LC {
 				LC.sum(LC.countBlackWhiteRun(topRight, topLeft, mtx, 5)) / 7) /
 			4;
 		if (mS < 1) W.e('Invalid module size');
-		const tD = W.MR(LC.distance(topLeft, topRight) / mS), //topDimension
-			sD = W.MR(LC.distance(topLeft, bottomLeft) / mS), //sideDimension
+		const tD = Math.round(LC.distance(topLeft, topRight) / mS), //topDimension
+			sD = Math.round(LC.distance(topLeft, bottomLeft) / mS), //sideDimension
 			d = W.MF((tD + sD) / 2) + 7; //dimension
-		return { dimension: (d += !d % 4 ? 1 : d % 4 === 2 ? -1 : 0), moduleSize: mS };
+		return { dimension: d + (!d % 4 ? 1 : d % 4 === 2 ? -1 : 0), moduleSize: mS };
 	}
 	// Takes an origin point and an end point and counts the sizes of the black white run from the origin towards the end point.
 	// Returns an array of elements, representing the pixel size of the black white run.
 	// Uses a variant of http://en.wikipedia.org/wiki/Bresenham's_line_algorithm
-	static countBlackWhiteRunTowardsPoint(org, end, mtx, len) {
-		const sps = [{ x: W.MF(org.x), y: W.MF(org.y) }], //switchPoints
-			steep = W.MA(end.y - org.y) > W.MA(end.x - org.x),
-			fromX = W.MF(steep ? org.y : org.x),
-			fromY = W.MF(steep ? org.x : org.y),
-			toX = W.MF(steep ? end.y : end.x),
-			toY = W.MF(steep ? end.x : end.y),
-			dx = W.MA(toX - fromX),
-			dy = W.MA(toY - fromY),
+	static countBlackWhiteRunTowardsPoint(origin, end, mtx, len) {
+		const sps = [{ x: Math.floor(origin.x), y: Math.floor(origin.y) }], //switchPoints
+			steep = Math.abs(end.y - origin.y) > Math.abs(end.x - origin.x),
+			fromX = Math.floor(steep ? origin.y : origin.x),
+			fromY = Math.floor(steep ? origin.x : origin.y),
+			toX = Math.floor(steep ? end.y : end.x),
+			toY = Math.floor(steep ? end.x : end.y),
+			dx = Math.abs(toX - fromX),
+			dy = Math.abs(toY - fromY),
 			xStep = fromX < toX ? 1 : -1,
 			yStep = fromY < toY ? 1 : -1;
-		let e = W.MF(-dx / 2), //error
+		let e = Math.floor(-dx / 2), //error
 			cP = true; //currentPixel // Loop up until x == toX, but not beyond
 		for (let x = fromX, y = fromY; x !== toX + xStep; x += xStep) {
 			// Does current pixel mean we have moved white to black or vice versa?
 			// Scanning black in state 0,2 and white in state 1, so if we find the wrong
 			// color, advance to next state or end if we are in state 2 already
-			const realX = steep ? y : x;
-			const realY = steep ? x : y;
-			if (mtx.get(realX, realY) !== cP) {
+			const rX = steep ? y : x;
+			const rY = steep ? x : y;
+			if (mtx.get(rX, rY) !== cP) {
 				cP = !cP;
-				sps.push({ x: realX, y: realY });
+				sps.push({ x: rX, y: rY });
 				if (sps.length === len + 1) break;
 			}
 			e += dy;
@@ -1077,16 +1070,16 @@ class LC {
 	static countBlackWhiteRun(org, end, mtx, len) {
 		const rise = end.y - org.y,
 			run = end.x - org.x,
-			towardsEnd = LC.countBlackWhiteRunTowardsPoint(org, end, mtx, W.MC(len / 2)),
-			awayFromEnd = LC.countBlackWhiteRunTowardsPoint(
+			tE = LC.countBlackWhiteRunTowardsPoint(org, end, mtx, Math.ceil(len / 2)), //towardsEnd
+			aE = LC.countBlackWhiteRunTowardsPoint(
 				org,
 				{ x: org.x - run, y: org.y - rise },
-				mtx,
-				W.MC(len / 2)
+				mtx, //awayFromEnd
+				Math.ceil(len / 2)
 			),
-			middleValue = towardsEnd.shift() + awayFromEnd.shift() - 1; // Substract one so we don't double count a pixel
+			mV = tE.shift() + aE.shift() - 1; //middleValue // Substract one so we don't double count a pixel
 		let _a;
-		return (_a = awayFromEnd.concat(middleValue)).concat.apply(_a, towardsEnd);
+		return (_a = aE.concat(mV)).concat.apply(_a, tE);
 	}
 	// Takes in a black white run and an array of expected ratios. Returns the average size of the run as well as the "error" -
 	// that is the amount the run diverges from the expected ratio
@@ -1094,7 +1087,7 @@ class LC {
 		const aS = LC.sum(seq) / LC.sum(ratios); //averageSize
 		let e = 0; //error
 		ratios.forEach((ratio, i) => {
-			e += W.MP(seq[i] - ratio * aS, 2);
+			e += Math.pow(seq[i] - ratio * aS, 2);
 		});
 		return { averageSize: aS, error: e };
 	}
@@ -1106,26 +1099,28 @@ class LC {
 			const hR = LC.countBlackWhiteRun(p, { x: -1, y: p.y }, mtx, ratios.length), //horizontalRun
 				vR = LC.countBlackWhiteRun(p, { x: p.x, y: -1 }, mtx, ratios.length), //verticalRun
 				tLP = {
-					x: W.MX(0, p.x - p.y) - 1,
-					y: W.MX(0, p.y - p.x) - 1,
+					x: Math.max(0, p.x - p.y) - 1,
+					y: Math.max(0, p.y - p.x) - 1,
 				}, //topLeftPoint
 				tLBRR = LC.countBlackWhiteRun(p, tLP, mtx, ratios.length), //topLeftBottomRightRun
 				bLR = {
-					x: W.MI(mtx.width, p.x + p.y) + 1,
-					y: W.MI(mtx.height, p.y + p.x) + 1,
+					x: Math.min(mtx.width, p.x + p.y) + 1,
+					y: Math.min(mtx.height, p.y + p.x) + 1,
 				}, //bottomLeftPoint
 				bLTRR = LC.countBlackWhiteRun(p, bLR, mtx, ratios.length), //bottomLeftTopRightRun
 				hE = LC.scoreBlackWhiteRun(hR, ratios), //horzError
 				vE = LC.scoreBlackWhiteRun(vR, ratios), //vertError
 				dDE = LC.scoreBlackWhiteRun(tLBRR, ratios), //diagDownError
 				dUE = LC.scoreBlackWhiteRun(bLTRR, ratios), //diagUpError
-				rE = W.MS(hE.error * hE.error + vE.error * vE.error + dDE.error * dDE.error + dUE.error * dUE.error), //ratioError
+				rE = Math.sqrt(
+					hE.error * hE.error + vE.error * vE.error + dDE.error * dDE.error + dUE.error * dUE.error
+				), //ratioError
 				aS = (hE.averageSize + vE.averageSize + dDE.averageSize + dUE.averageSize) / 4, //avgSize
 				sE =
-					(W.MP(hE.averageSize - aS, 2) +
-						W.MP(vE.averageSize - aS, 2) +
-						W.MP(dDE.averageSize - aS, 2) +
-						W.MP(dUE.averageSize - aS, 2)) /
+					(Math.pow(hE.averageSize - aS, 2) +
+						Math.pow(vE.averageSize - aS, 2) +
+						Math.pow(dDE.averageSize - aS, 2) +
+						Math.pow(dUE.averageSize - aS, 2)) /
 					aS; //sizeError
 			return rE + sE;
 		} catch (e) {
@@ -1134,15 +1129,15 @@ class LC {
 		}
 	}
 	static recenterLocation(mtx, p) {
-		let leftX = W.MR(p.x);
-		while (mtx.get(leftX, W.MR(p.y))) leftX--;
-		let rightX = W.MR(p.x);
-		while (mtx.get(rightX, W.MR(p.y))) rightX++;
+		let leftX = Math.round(p.x);
+		while (mtx.get(leftX, Math.round(p.y))) leftX--;
+		let rightX = Math.round(p.x);
+		while (mtx.get(rightX, Math.round(p.y))) rightX++;
 		const x = (leftX + rightX) / 2;
-		let topY = W.MR(p.y);
-		while (mtx.get(W.MR(x), topY)) topY--;
-		let bottomY = W.MR(p.y);
-		while (mtx.get(W.MR(x), bottomY)) bottomY++;
+		let topY = Math.round(p.y);
+		while (mtx.get(Math.round(x), topY)) topY--;
+		let bottomY = Math.round(p.y);
+		while (mtx.get(Math.round(x), bottomY)) bottomY++;
 		const y = (topY + bottomY) / 2;
 		return { x, y };
 	}
@@ -1161,23 +1156,26 @@ class LC {
 						else {
 							ss = [ss[1], ss[2], ss[3], ss[4], l1];
 							l1 = 1;
-							lb = v; // Do the last 5 color changes ~ match the expected ratio for a finder pattern? 1:1:3:1:1 of b:w:b:w:b
+							lb = v;
+							// Do the last 5 color changes ~ match the expected ratio for a finder pattern? 1:1:3:1:1 of b:w:b:w:b
 							const aFPB = LC.sum(ss) / 7, //averageFinderPatternBlocksize
 								vFP = //validFinderPattern
-									W.MA(ss[0] - aFPB) < aFPB &&
-									W.MA(ss[1] - aFPB) < aFPB &&
-									W.MA(ss[2] - 3 * aFPB) < 3 * aFPB &&
-									W.MA(ss[3] - aFPB) < aFPB &&
-									W.MA(ss[4] - aFPB) < aFPB &&
+									Math.abs(ss[0] - aFPB) < aFPB &&
+									Math.abs(ss[1] - aFPB) < aFPB &&
+									Math.abs(ss[2] - 3 * aFPB) < 3 * aFPB &&
+									Math.abs(ss[3] - aFPB) < aFPB &&
+									Math.abs(ss[4] - aFPB) < aFPB &&
 									!v, // And make sure the current pixel is white since finder patterns are bordered in white
-								aAPB = LC.sum(ss.slice(-3)) / 3, //averageAlignmentPatternBlocksize // Do the last 3 color changes ~ match the expected ratio for an alignment pattern? 1:1:1 of w:b:w
+								// Do the last 3 color changes ~ match the expected ratio for an alignment pattern? 1:1:1 of w:b:w
+								aAPB = LC.sum(ss.slice(-3)) / 3, //averageAlignmentPatternBlocksize
 								vAP = //validAlignmentPattern
-									W.MA(ss[2] - aAPB) < aAPB &&
-									W.MA(ss[3] - aAPB) < aAPB &&
-									W.MA(ss[4] - aAPB) < aAPB &&
+									Math.abs(ss[2] - aAPB) < aAPB &&
+									Math.abs(ss[3] - aAPB) < aAPB &&
+									Math.abs(ss[4] - aAPB) < aAPB &&
 									v; // Is the current pixel black since alignment patterns are bordered in black
 							if (vFP) {
-								const eX = x - ss[3] - ss[4], //endX_1// Compute the start and end x values of the large center black square
+								// Compute the start and end x values of the large center black square
+								const eX = x - ss[3] - ss[4], //endX_1
 									sX = eX - ss[2], //startX_1
 									line = { startX: sX, endX: eX, y: y },
 									// Is there a quad directly above the current spot? If so, extend it with the new line. Otherwise, create a new quad with
@@ -1227,23 +1225,20 @@ class LC {
 				aAPQ = aAPQ.filter((q) => q.bottom.y === y);
 			};
 		for (let y = 0; y <= mtx.height; y++) _loop_1(y);
-		console.log('locate aFPQ:', aFPQ);
 		W.concat(
 			fPQ,
 			aFPQ.filter((q) => q.bottom.y - q.top.y >= 2)
 		);
-		console.log('locate aAPQ:', aAPQ);
 		W.concat(aPQ, aAPQ);
-		console.log('locate fPQ:', fPQ);
 		const fPG = fPQ //finderPatternGroups
 			.filter((q) => q.bottom.y - q.top.y >= 2) // All quads must be at least 2px tall since the center square is larger than a block
 			.map((q) => {
 				const x = (q.top.startX + q.top.endX + q.bottom.startX + q.bottom.endX) / 4,
 					y = (q.top.y + q.bottom.y + 1) / 2;
-				if (!mtx.get(W.MR(x), W.MR(y))) return;
+				if (!mtx.get(Math.round(x), Math.round(y))) return;
 				const l = [q.top.endX - q.top.startX, q.bottom.endX - q.bottom.startX, q.bottom.y - q.top.y + 1], //lengths
 					size = LC.sum(l) / l.length,
-					score = LC.scorePattern({ x: W.MR(x), y: W.MR(y) }, [1, 1, 3, 1, 1], mtx);
+					score = LC.scorePattern({ x: Math.round(x), y: Math.round(y) }, [1, 1, 3, 1, 1], mtx);
 				return { score, x, y, size };
 			})
 			.filter((q) => !!q) // Filter out any rejected quads from above
@@ -1256,7 +1251,7 @@ class LC {
 						return {
 							x: p.x,
 							y: p.y,
-							score: p.score + W.MP(p.size - point.size, 2) / point.size,
+							score: p.score + Math.pow(p.size - point.size, 2) / point.size,
 							size: p.size,
 						};
 					})
@@ -1267,7 +1262,6 @@ class LC {
 			})
 			.filter((q) => !!q) // Filter out any rejected finder patterns from above
 			.sort((a, b) => a.score - b.score);
-		console.log('locate fPG:', fPG);
 		if (fPG.length === 0) return null;
 		const i = LC.reorderFinderPatterns(fPG[0].points[0], fPG[0].points[1], fPG[0].points[2]),
 			tR = i.topRight, //topRight
@@ -1303,7 +1297,6 @@ class LC {
 				topRight: { x: mTR.x, y: mTR.y },
 				dimension: cAl.dimension,
 			});
-		console.log('locate r:' + r);
 		return r.length === 0 ? null : r;
 	}
 	static findAlignmentPattern(mtx, alignmentPatternQuads, topRight, topLeft, bottomLeft) {
@@ -1331,8 +1324,8 @@ class LC {
 			.map((q) => {
 				const x = (q.top.startX + q.top.endX + q.bottom.startX + q.bottom.endX) / 4,
 					y = (q.top.y + q.bottom.y + 1) / 2;
-				if (!mtx.get(W.MF(x), W.MF(y))) return;
-				const ss = LC.scorePattern({ x: W.MF(x), y: W.MF(y) }, [1, 1, 1], mtx); //sizeScore
+				if (!mtx.get(Math.floor(x), Math.floor(y))) return;
+				const ss = LC.scorePattern({ x: Math.floor(x), y: Math.floor(y) }, [1, 1, 1], mtx); //sizeScore
 				return { x, y, score: ss + LC.distance({ x: x, y: y }, eAP) };
 			})
 			.filter((v) => !!v)
@@ -1346,7 +1339,6 @@ class LC {
 class JsQR {
 	static scan(mtx) {
 		const ls = LC.locate(mtx); //locations
-		console.log('scan ls:' + ls);
 		if (!ls) return null;
 		for (const l of ls) {
 			const extd = EX.extract(mtx, l), //extracted
@@ -1380,9 +1372,7 @@ class JsQR {
 		const shouldInvert = opts.inversionAttempts === 'attemptBoth' || opts.inversionAttempts === 'invertFirst';
 		const tryInvertedFirst = opts.inversionAttempts === 'onlyInvert' || opts.inversionAttempts === 'invertFirst';
 		const i = BZ.binarize(data, width, height, shouldInvert);
-		console.log('exec i:', i.inverted, i.binarized);
 		let r = JsQR.scan(tryInvertedFirst ? i.inverted : i.binarized);
-		console.log('exec r:' + r);
 		return !r && (opts.inversionAttempts === 'attemptBoth' || opts.inversionAttempts === 'invertFirst')
 			? JsQR.scan(tryInvertedFirst ? i.binarized : i.inverted)
 			: r;
