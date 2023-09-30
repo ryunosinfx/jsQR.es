@@ -37,7 +37,9 @@
     "watch": "webpack --watch",
     "test": "jest",
     "lint": "tslint --project .",
-    "generate-test-data": "ts-node --project tests/ tests/generate-test-data.ts"
+    "generate-test-data": "ts-node --project tests/ tests/generate-test-data.ts",
+    "eslint":"",
+    "eshost":"node ./server.mjs"
   },
   "jest": {
     "testRegex": ".*test.ts",
