@@ -5,7 +5,6 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=480,initial-scale=1.5" />
     <title>TEST jsQR</title>
-    <script src="./setting.Compress.js"></script>
     <script src="./jsQR.js" type=""></script>
     <script src="./qrcode.es.js" type="module"></script>
     <script src="./Test.js" type="module"></script>
@@ -30,7 +29,7 @@
                 </div>
             </div>
             <script type="module">
-                import { CanvasQRCode } from "./qrcode.js";
+                import { CanvasQRCode } from "./qrcode.es.js";
                 import { Test } from "./Test.js";
                 const qr = document.getElementById("qr");
                 new CanvasQRCode(qr);
@@ -48,6 +47,7 @@
                 }
                 a();
             </script>
+            <!-- <script src="./setting.Compress.js"></script> -->
 </body>
 
 </html>
