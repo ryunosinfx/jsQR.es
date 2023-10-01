@@ -5,13 +5,40 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=480,initial-scale=1.5" />
     <title>TEST jsQR</title>
-    <script src="./jsQR.js" type=""></script>
+    <script src="./jsQR.origin.js" type=""></script>
     <script src="./qrcode.es.js" type="module"></script>
     <script src="./Test.js" type="module"></script>
     <style>
         div.s {
             font-size: 50%;
             ;
+        }
+
+
+        div.test {
+            margin: 0.3em;
+            padding: 0.3em;
+            background-color: gray;
+            border: solid 2px darkgray;
+        }
+
+        div.test.OK {
+            color: #005018
+        }
+
+        div.test.NG {
+            color: maroon
+        }
+
+        div.text {
+            font-size: 50%;
+            ;
+        }
+
+        div.duri {
+            font-size: 10%;
+            word-wrap: break-word;
+            word-break: break-all;
         }
     </style>
 </head>
@@ -36,14 +63,22 @@
                 const a = async () => {
                     const tested = await Test.exec(document.getElementById("qr2"));
                     const r = []
+                    const elm = document.getElementById("r");
                     for (const d of tested) {
                         const result = jsQR(d.data, d.s, d.s);
                         const c = result ? result.binaryData : result;
-                        const t = Test.a2S(c);
-                        r.push({ text: d.text, t, is: (t === d.text) })
+                        const jsRQ_Origin_Decoded = Test.a2S(c);
+                        const child = document.createElement("div")
+                        const et = document.getElementById(d.text)
+                        et.textContent = et.textContent + " / is jsRQ_Origin_Decoded OK?:" + (jsRQ_Origin_Decoded === d.text)
+                        child.textContent = JSON.stringify({ text: d.text, jsRQ_Origin_Decoded, isOK: (jsRQ_Origin_Decoded === d.text) })
+                        elm.appendChild(child)
+                        const parent = et.parentElement;
+                        const btn = document.createElement("button");
+                        btn.textContent = "rerun";
+                        btn.addEventListener("click", Test.getRerunFunc(jsQR, d.dURI))
+                        parent.appendChild(btn)
                     }
-                    const elm = document.getElementById("r");
-                    elm.textContent = JSON.stringify(r)
                 }
                 a();
             </script>

@@ -190,14 +190,15 @@ export class Test {
 		}
 		return B64U.u8aToString(u8a);
 	}
-	static async check(elm, text, s = 200) {
+	static async check(elm, text, s = Math.floor(Math.random() * 100) + 150) {
 		const be = Test.baseElm;
 		new CanvasQRCode(be, text, s, s);
 		const c = be.firstChild;
 		const x = c.getContext('2d');
 		const d = x.getImageData(0, 0, s, s);
 		const c2 = document.createElement('canvas');
-		const s2 = s * 1.5;
+		const s2 = Math.floor(s * 1.5);
+		console.log('s:' + s + '/s2:' + s2);
 		c2.width = c2.height = s2;
 		const x2 = c2.getContext('2d'),
 			d2 = x2.createImageData(s2, s2),
@@ -212,15 +213,64 @@ export class Test {
 		const d3 = x2.getImageData(0, 0, s2, s2);
 		const dURI = c2.toDataURL('image/png');
 		const i = document.createElement('img');
-		elm.appendChild(i);
+		const f = document.createElement('div');
+		const g = document.createElement('div');
+		const h = document.createElement('div');
+		const j = document.createElement('div');
+		g.appendChild(i);
+		g.appendChild(f);
+		g.appendChild(h);
+		g.appendChild(j);
+
+		f.classList.add('text');
+		j.classList.add('duri');
+		g.classList.add('test');
+		f.textContent = '' + text;
+		elm.appendChild(g);
 		i.src = dURI;
+		j.textContent = dURI;
 		const result = await jsQR(d3.data, s2, s2);
 		while (be.firstChild) {
 			be.removeChild(be.firstChild);
 		}
+		console.log(result);
 		const bd = result ? result.binaryData : result;
-		const t = Test.a2S(bd);
-		console.log('text:' + text + ' /result:' + result + ' ' + (text === t), d3.data, result);
-		return { text, data: d3.data, s: s2 };
+		const t = bd ? Test.a2S(bd) : null;
+		const isOK = text === t;
+		g.classList.add(isOK ? 'OK' : 'NG');
+		h.textContent = isOK ? 'OK' : 'NG ' + result;
+		h.setAttribute('id', text);
+		console.log('text:' + text + ' /result:' + result + ' ' + isOK, d3.data, result);
+		return { text, data: d3.data, s: s2, isOK, dURI };
+	}
+	static getRerunFunc(jsRQorigin, dURI) {
+		return () => {
+			const f = async (resolve) => {
+				const i = document.createElement('img');
+				i.onload = async () => {
+					const c = Test.canvas;
+					const s = i.width;
+					console.log('s:' + s);
+					c.width = c.height = s;
+					const x = c.getContext('2d');
+					x.drawImage(i, 0, 0);
+					const d = x.getImageData(0, 0, s, s);
+					console.log('=== ES =======================================================');
+					const re = await jsQR(d.data, s, s);
+					console.log('===ORIGIN=======================================================');
+					const ro = jsRQorigin(d.data, s, s);
+					console.log('==========================================================');
+					const bde = re ? re.binaryData : re;
+					const te = bde ? Test.a2S(bde) : null;
+					const bdo = ro ? ro.binaryData : ro;
+					const to = bdo ? Test.a2S(bdo) : null;
+
+					console.log(te === to ? 'OK' : 'NG');
+					resolve({ te, to });
+				};
+				i.src = dURI;
+			};
+			return new Promise(f);
+		};
 	}
 }
