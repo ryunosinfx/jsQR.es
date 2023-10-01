@@ -1,4 +1,4 @@
-import { jsQR } from './jsQR.es.js';
+import { jsQR } from './jsQR.es.min.js';
 // import { jsQR } from './jsQR.js';
 import { CanvasQRCode } from './qrcode.es.js';
 const te = new TextEncoder('utf-8');
@@ -247,7 +247,7 @@ export class Test {
 		);
 		return { text, data: d3.data, s: s2, isOK, dURI };
 	}
-	static getRerunFunc(jsRQorigin, dURI) {
+	static getRerunFunc(jsRQorigin, dURI, origin) {
 		return () => {
 			const f = async (resolve) => {
 				const i = document.createElement('img');
@@ -270,6 +270,7 @@ export class Test {
 					const to = bdo ? Test.a2S(bdo) : null;
 
 					console.log(te === to ? 'OK' : 'NG');
+					console.log(te, to, origin);
 					resolve({ te, to });
 				};
 				i.src = dURI;

@@ -76,7 +76,7 @@
                         const parent = et.parentElement;
                         const btn = document.createElement("button");
                         btn.textContent = "rerun";
-                        btn.addEventListener("click", Test.getRerunFunc(jsQR, d.dURI))
+                        btn.addEventListener("click", Test.getRerunFunc(jsQR, d.dURI, d.text))
                         parent.appendChild(btn)
                     }
                 }
