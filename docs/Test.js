@@ -240,7 +240,11 @@ export class Test {
 		g.classList.add(isOK ? 'OK' : 'NG');
 		h.textContent = isOK ? 'OK' : 'NG ' + result;
 		h.setAttribute('id', text);
-		console.log('text:' + text + ' /result:' + result + ' ' + isOK, d3.data, result);
+		console.log(
+			'text:' + text + '/h.textContent :' + h.textContent + ' /result:' + result + ' ' + isOK,
+			d3.data,
+			result
+		);
 		return { text, data: d3.data, s: s2, isOK, dURI };
 	}
 	static getRerunFunc(jsRQorigin, dURI) {
