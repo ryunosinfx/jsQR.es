@@ -79,6 +79,14 @@
                         btn.addEventListener("click", Test.getRerunFunc(jsQR, d.dURI, d.text))
                         parent.appendChild(btn)
                     }
+                    const child = document.createElement("div")
+                    elm.appendChild(child)
+                    const ta = document.createElement("textarea")
+                    child.appendChild(ta)
+                    const btn = document.createElement("button");
+                    btn.textContent = "rerun";
+                    child.appendChild(btn)
+                    btn.addEventListener("click", () => { alert("aaa"); Test.getRerunFunc(jsQR, ta.value)() })
                 }
                 a();
             </script>
