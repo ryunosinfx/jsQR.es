@@ -249,7 +249,7 @@ class GenericGFPoly {
 		let _a;
 		if (this.isZero()) return other;
 		if (other.isZero()) return this;
-		const smallerCoefficients = this.coefficients,
+		let smallerCoefficients = this.coefficients,
 			largerCoefficients = other.coefficients;
 		if (smallerCoefficients.length > largerCoefficients.length) {
 			(_a = [largerCoefficients, smallerCoefficients]),
@@ -968,7 +968,6 @@ class Decoder {
 		try {
 			return DecodeData.decode(resultBytes, version.versionNumber);
 		} catch (_a) {
-			console.log('_a', _a);
 			return null;
 		}
 	}
@@ -1439,7 +1438,6 @@ class Locator {
 			dimension = _a.dimension;
 			moduleSize = _a.moduleSize;
 		} catch (e) {
-			console.log('computeDimension', e);
 			return null;
 		}
 		const bRFP = {
