@@ -104,23 +104,23 @@ class W {
 	}
 	static compress(t) {
 		const k = Object.keys(t),
-			u8a = new Uint8Array(k.length * 4);
+			u = new Uint8Array(k.length * 4);
 		let c = 0;
-		u8a.fill(0);
+		u.fill(0);
 		for (const [k, v] of Object.entries(t)) {
 			const n = k * 1;
-			u8a[c + 0] = n >> 8;
-			u8a[c + 1] = n % 256;
-			u8a[c + 2] = v >> 8;
-			u8a[c + 3] = v % 256;
+			u[c + 0] = n >> 8;
+			u[c + 1] = n % 256;
+			u[c + 2] = v >> 8;
+			u[c + 3] = v % 256;
 			c += 4;
 		}
-		return u8a;
+		return u;
 	}
-	static decompress(u8a) {
+	static decompress(a) {
 		const m = {},
-			l = u8a.length;
-		for (let c = 0; c < l; c += 4) m[((u8a[c + 0] << 8) | u8a[c + 1]) + ''] = (u8a[c + 2] << 8) | u8a[c + 3];
+			l = a.length;
+		for (let c = 0; c < l; c += 4) m[((a[c + 0] << 8) | a[c + 1]) + ''] = (a[c + 2] << 8) | a[c + 3];
 		return m;
 	}
 	static SJIS_dURI =
@@ -139,9 +139,9 @@ class W {
 	static e(m) {
 		throw new Error(m);
 	}
-	static concat = (base, add) => Array.prototype.push.apply(base, add);
+	static cat = (b, a) => Array.prototype.push.apply(b, a);
 	static A = (s) => new Array(s);
-	static MF = (n) => Math.floor(n);
+	static n = (m, n, l) => (console.log(m, n, l) ? null : null);
 }
 /*0 BitMatrix*/
 class BM {
@@ -150,35 +150,36 @@ class BM {
 		this.height = d.length / w;
 		this.data = d;
 	}
-	static createEmpty = (w, h) => new BM(W.u8ca(w * h), w); //width,height
+	static c = (w, h) => new BM(W.u8ca(w * h), w); //createEmpty //width,height
 	get(x, y) {
 		return x < 0 || x >= this.width || y < 0 || y >= this.height ? false : !!this.data[y * this.width + x];
 	}
 	set(x, y, v) {
 		this.data[y * this.width + x] = v ? 1 : 0;
 	}
-	setRegion(left, top, w, h, v) {
-		for (let y = top; y < top + h; y++) for (let x = left; x < left + w; x++) this.set(x, y, !!v); //width,height
+	sR(left, top, w, h, v) {
+		for (let y = top; y < top + h; y++) for (let x = left; x < left + w; x++) this.set(x, y, !!v); //setRegion //width,height
 	}
 }
 /* 1 GenericGF*/
 class GGF {
-	static addOrSubtractGF = (a, b) => a ^ b; // tslint:disable-line:no-bitwise
+	static a = (a, b) => a ^ b; // addOrSubtractGF
 	constructor(primitive, size, genBase) {
-		this.primitive = primitive;
-		this.size = size;
-		this.generatorBase = genBase;
-		this.expTable = W.A(this.size);
-		this.logTable = W.A(this.size);
+		const z = this;
+		z.primitive = primitive;
+		z.size = size;
+		z.generatorBase = genBase;
+		z.expTable = W.A(z.size);
+		z.logTable = W.A(z.size);
 		let x = 1;
-		for (let i = 0; i < this.size; i++) {
-			this.expTable[i] = x;
+		for (let i = 0; i < z.size; i++) {
+			z.expTable[i] = x;
 			x = x * 2;
-			if (x >= this.size) x = (x ^ this.primitive) & (this.size - 1); // tslint:disable-line:no-bitwise
+			if (x >= z.size) x = (x ^ z.primitive) & (z.size - 1);
 		}
-		for (let i = 0; i < this.size - 1; i++) this.logTable[this.expTable[i]] = i;
-		this.zero = new GGFPoly(this, Uint8ClampedArray.from([0]));
-		this.one = new GGFPoly(this, Uint8ClampedArray.from([1]));
+		for (let i = 0; i < z.size - 1; i++) z.logTable[z.expTable[i]] = i;
+		z.zero = new GGFPoly(z, Uint8ClampedArray.from([0]));
+		z.one = new GGFPoly(z, Uint8ClampedArray.from([1]));
 	}
 	multiply(a, b) {
 		return a === 0 || b === 0 ? 0 : this.expTable[(this.logTable[a] + this.logTable[b]) % (this.size - 1)];
@@ -206,17 +207,18 @@ class GGF {
 class GGFPoly {
 	constructor(field, coefficients) {
 		if (coefficients.length === 0) W.e('No coefficients.');
-		this.field = field;
+		const z = this;
+		z.field = field;
 		const cl = coefficients.length; //coefficientsLength
 		if (cl > 1 && coefficients[0] === 0) {
 			let f = 1; //firstNonZero // Leading term must be non-zero for anything except the constant polynomial "0"
 			while (f < cl && coefficients[f] === 0) f++;
-			if (f === cl) this.coefficients = field.zero.coefficients;
+			if (f === cl) z.coefficients = field.zero.coefficients;
 			else {
-				this.coefficients = W.u8ca(cl - f);
-				for (let i = 0; i < this.coefficients.length; i++) this.coefficients[i] = coefficients[f + i];
+				z.coefficients = W.u8ca(cl - f);
+				for (let i = 0; i < z.coefficients.length; i++) z.coefficients[i] = coefficients[f + i];
 			}
-		} else this.coefficients = coefficients;
+		} else z.coefficients = coefficients;
 	}
 	degree() {
 		return this.coefficients.length - 1;
@@ -228,38 +230,41 @@ class GGFPoly {
 		return this.coefficients[this.coefficients.length - 1 - deg];
 	}
 	addOrSubtract(other) {
-		if (this.isZero()) return other;
-		if (other.isZero()) return this;
-		let sc = this.coefficients, //smallerCoefficients
+		const z = this;
+		if (z.isZero()) return other;
+		if (other.isZero()) return z;
+		let sc = z.coefficients, //smallerCoefficients
 			lc = other.coefficients; //largerCoefficients
 		const j = [lc, sc];
 		if (sc.length > lc.length) (sc = j[0]), (lc = j[1]);
 		const sd = W.u8ca(lc.length), //sumDiff
 			ld = lc.length - sc.length; //lengthDiff
 		for (let i = 0; i < ld; i++) sd[i] = lc[i];
-		for (let i = ld; i < lc.length; i++) sd[i] = GGF.addOrSubtractGF(sc[i - ld], lc[i]);
-		return new GGFPoly(this.field, sd);
+		for (let i = ld; i < lc.length; i++) sd[i] = GGF.a(sc[i - ld], lc[i]);
+		return new GGFPoly(z.field, sd);
 	}
 	multiply(scalar) {
-		if (scalar === 0) return this.field.zero;
-		if (scalar === 1) return this;
-		const s = this.coefficients.length, //size
+		const z = this;
+		if (scalar === 0) return z.field.zero;
+		if (scalar === 1) return z;
+		const s = z.coefficients.length, //size
 			p = W.u8ca(s); //product
-		for (let i = 0; i < s; i++) p[i] = this.field.multiply(this.coefficients[i], scalar);
-		return new GGFPoly(this.field, p);
+		for (let i = 0; i < s; i++) p[i] = z.field.multiply(z.coefficients[i], scalar);
+		return new GGFPoly(z.field, p);
 	}
 	multiplyPoly(other) {
-		if (this.isZero() || other.isZero()) return this.field.zero;
-		const ac = this.coefficients, //aCoefficients
+		const z = this;
+		if (z.isZero() || other.isZero()) return z.field.zero;
+		const ac = z.coefficients, //aCoefficients
 			al = ac.length, //aLength
 			bc = other.coefficients, //bCoefficients
 			bl = bc.length, //bLength
 			p = W.u8ca(al + bl - 1); //product
 		for (let i = 0; i < al; i++) {
 			const a = ac[i];
-			for (let j = 0; j < bl; j++) p[i + j] = GGF.addOrSubtractGF(p[i + j], this.field.multiply(a, bc[j]));
+			for (let j = 0; j < bl; j++) p[i + j] = GGF.a(p[i + j], z.field.multiply(a, bc[j]));
 		}
-		return new GGFPoly(this.field, p);
+		return new GGFPoly(z.field, p);
 	}
 	multiplyByMonomial(deg, coefficient) {
 		if (deg < 0) W.e('Invalid degree less than 0');
@@ -270,17 +275,18 @@ class GGFPoly {
 		return new GGFPoly(this.field, p);
 	}
 	evaluateAt(a) {
-		if (a === 0) return this.getCoefficient(0); // Just return the x^0 coefficient
-		const s = this.coefficients.length; //size
+		const z = this;
+		if (a === 0) return z.getCoefficient(0); // Just return the x^0 coefficient
+		const s = z.coefficients.length; //size
 		let r = 0; //result
 		if (a === 1) {
-			this.coefficients.forEach((coefficient) => {
-				r = GGF.addOrSubtractGF(r, coefficient);
+			z.coefficients.forEach((coefficient) => {
+				r = GGF.a(r, coefficient);
 			}); // Just the sum of the coefficients
 			return r;
 		}
-		r = this.coefficients[0];
-		for (let i = 1; i < s; i++) r = GGF.addOrSubtractGF(this.field.multiply(a, r), this.coefficients[i]);
+		r = z.coefficients[0];
+		for (let i = 1; i < s; i++) r = GGF.a(z.field.multiply(a, r), z.coefficients[i]);
 		return r;
 	}
 }
@@ -336,7 +342,7 @@ class RS {
 			const xi = field.inverse(errorLocations[i]); //xiInverse
 			let d = 1; //denominator
 			for (let j = 0; j < s; j++)
-				if (i !== j) d = field.multiply(d, GGF.addOrSubtractGF(1, field.multiply(errorLocations[j], xi)));
+				if (i !== j) d = field.multiply(d, GGF.a(1, field.multiply(errorLocations[j], xi)));
 			r[i] = field.multiply(errorEvaluator.evaluateAt(xi), field.inverse(d));
 			if (field.generatorBase !== 0) r[i] = field.multiply(r[i], xi);
 		}
@@ -364,7 +370,7 @@ class RS {
 		for (let i = 0; i < eL.length; i++) {
 			const po = oB.length - 1 - f.log(eL[i]); //position
 			if (po < 0) return null;
-			oB[po] = GGF.addOrSubtractGF(oB[po], eM[i]);
+			oB[po] = GGF.a(oB[po], eM[i]);
 		}
 		return oB;
 	}
@@ -385,7 +391,7 @@ class Mtx {
 class BZ {
 	static REGION_SIZE = 8;
 	static MIN_DYNAMIC_RANGE = 24;
-	static numBetween = (value, min, max) => (value < min ? min : value > max ? max : value);
+	static nb = (value, min, max) => (value < min ? min : value > max ? max : value); //numBetween
 	static binarize(data, w, h, returnInverted) {
 		if (data.length !== w * h * 4) W.e('Malformed data passed to binarizer.');
 		const gP = new Mtx(w, h); //greyscalePixels // Convert image to greyscale
@@ -397,8 +403,9 @@ class BZ {
 				gP.set(x, y, 0.2126 * r + 0.7152 * g + 0.0722 * b);
 			}
 		const RS = BZ.REGION_SIZE,
-			hRC = Math.ceil(w / RS), //horizontalRegionCount
-			vRC = Math.ceil(h / RS), //verticalRegionCount
+			M = Math,
+			hRC = M.ceil(w / RS), //horizontalRegionCount
+			vRC = M.ceil(h / RS), //verticalRegionCount
 			bP = new Mtx(hRC, vRC); //blackPoints
 		for (let vR = 0; vR < vRC; vR++) {
 			for (let hR = 0; hR < hRC; hR++) {
@@ -409,10 +416,10 @@ class BZ {
 					for (let x = 0; x < RS; x++) {
 						let pL = gP.get(hR * RS + x, vR * RS + y); //pixelLumosity
 						sum += pL;
-						min = Math.min(min, pL);
-						max = Math.max(max, pL);
+						min = M.min(min, pL);
+						max = M.max(max, pL);
 					}
-				let avg = sum / Math.pow(RS, 2);
+				let avg = sum / M.pow(RS, 2);
 				if (max - min <= BZ.MIN_DYNAMIC_RANGE) {
 					// If variation within the block is low, assume this is a block with only light or only
 					// dark pixels. In that case we do not want to use the average, as it would divide this
@@ -434,13 +441,13 @@ class BZ {
 				bP.set(hR, vR, avg);
 			}
 		}
-		const bzd = BM.createEmpty(w, h); //binarized
-		let ivtd = null; //inverted
-		if (returnInverted) ivtd = BM.createEmpty(w, h);
+		const bz = BM.c(w, h); //binarized
+		let iv = null; //inverted
+		if (returnInverted) iv = BM.c(w, h);
 		for (let vR = 0; vR < vRC; vR++)
 			for (let hR = 0; hR < hRC; hR++) {
-				const l = BZ.numBetween(hR, 2, hRC - 3), //left
-					t = BZ.numBetween(vR, 2, vRC - 3); //top_1
+				const l = BZ.nb(hR, 2, hRC - 3), //left
+					t = BZ.nb(vR, 2, vRC - 3); //top_1
 				let sum = 0;
 				for (let xR = -2; xR <= 2; xR++) for (let yR = -2; yR <= 2; yR++) sum += bP.get(l + xR, t + yR);
 				const th = sum / 25; //threshold
@@ -449,11 +456,11 @@ class BZ {
 						const x = hR * RS + xR,
 							y = vR * RS + yR,
 							lum = gP.get(x, y);
-						bzd.set(x, y, lum <= th);
-						if (returnInverted) ivtd.set(x, y, !(lum <= th));
+						bz.set(x, y, lum <= th);
+						if (returnInverted) iv.set(x, y, !(lum <= th));
 					}
 			}
-		return returnInverted ? { binarized: bzd, inverted: ivtd } : { binarized: bzd };
+		return returnInverted ? { binarized: bz, inverted: iv } : { binarized: bz };
 	}
 }
 /* 7 BitStream*/
@@ -463,33 +470,34 @@ class BS {
 		this.bitOffset = 0;
 		this.bytes = bytes;
 	}
-	readBits(nB) {
-		if (nB < 1 || nB > 32 || nB > this.available()) W.e('Cannot read ' + nB.toString() + ' bits'); //numBits
+	r(n) {
+		const z = this; //readBits
+		if (nB < 1 || nB > 32 || nB > z.available()) W.e('Cannot read ' + nB.toString() + ' bits'); //numBits
 		let r = 0;
-		if (this.bitOffset > 0) {
-			const bL = 8 - this.bitOffset, //bitsLeft// First, read remainder from current byte
+		if (z.bitOffset > 0) {
+			const bL = 8 - z.bitOffset, //bitsLeft// First, read remainder from current byte
 				tR = nB < bL ? nB : bL, //toRead
-				b2NR = bL - tR, //bitsToNotRead
-				m = (0xff >> (8 - tR)) << b2NR; //mask
-			r = (this.bytes[this.byteOffset] & m) >> b2NR;
+				bN = bL - tR, //bitsToNotRead
+				m = (0xff >> (8 - tR)) << bN; //mask
+			r = (z.bytes[z.byteOffset] & m) >> bN;
 			nB -= tR;
-			this.bitOffset += tR;
-			if (this.bitOffset === 8) {
-				this.bitOffset = 0;
-				this.byteOffset++;
+			z.bitOffset += tR;
+			if (z.bitOffset === 8) {
+				z.bitOffset = 0;
+				z.byteOffset++;
 			}
 		}
 		if (nB > 0) {
 			while (nB >= 8) {
-				r = (r << 8) | (this.bytes[this.byteOffset] & 0xff); // Next read whole bytes
-				this.byteOffset++;
+				r = (r << 8) | (z.bytes[z.byteOffset] & 0xff); // Next read whole bytes
+				z.byteOffset++;
 				nB -= 8;
 			}
 			if (nB > 0) {
-				const b2NR = 8 - nB, //bitsToNotRead // Finally read a partial byte
-					m = (0xff >> b2NR) << b2NR; //mask
-				r = (r << nB) | ((this.bytes[this.byteOffset] & m) >> b2NR);
-				this.bitOffset += nB;
+				const bN = 8 - nB, //bitsToNotRead // Finally read a partial byte
+					m = (0xff >> bN) << bN; //mask
+				r = (r << nB) | ((z.bytes[z.byteOffset] & m) >> bN);
+				z.bitOffset += nB;
 			}
 		}
 		return r;
@@ -516,30 +524,30 @@ class DD {
 		ECI: 7,
 		7: 'ECI',
 	};
-	static decodeNumeric(strm, size) {
-		const b = [], //bytes
+	static dN(strm, size) {
+		const b = [], ////bytes
 			cCS = [10, 12, 14][size]; //characterCountSize
 		let t = '',
-			l = strm.readBits(cCS);
+			l = strm.r(cCS);
 		while (l >= 3) {
-			const n = strm.readBits(10); // num// Read digits in groups of 3
+			const n = strm.r(10); // num// Read digits in groups of 3
 			if (n >= 1000) W.e('Invalid numeric value above 999');
-			const a = W.MF(n / 100),
-				b = W.MF(n / 10) % 10,
+			const a = Math.floor(n / 100),
+				b = Math.floor(n / 10) % 10,
 				c = n % 10;
 			b.push(48 + a, 48 + b, 48 + c);
 			t += a.toString() + b.toString() + c.toString();
 			l -= 3;
 		}
 		if (l === 2) {
-			const n = strm.readBits(7); // num// If the number of digits aren't a multiple of 3, the remaining digits are special cased.
+			const n = strm.r(7); // num// If the number of digits aren't a multiple of 3, the remaining digits are special cased.
 			if (n >= 100) W.e('Invalid numeric value above 99');
-			const a = W.MF(n / 10),
+			const a = Math.floor(n / 10),
 				b = n % 10;
 			b.push(48 + a, 48 + b);
 			t += a.toString() + b.toString();
 		} else if (l === 1) {
-			const n = strm.readBits(4); // num
+			const n = strm.r(4); // num
 			if (n >= 10) W.e('Invalid numeric value above 9');
 			b.push(48 + n);
 			t += n.toString();
@@ -547,33 +555,33 @@ class DD {
 		return { bytes: b, text: t };
 	}
 	static ACC = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:'.split(''); //AlphanumericCharacterCodes
-	static decodeAlphanumeric(strm, size) {
+	static dA(strm, size) {
 		const b = [], //bytes
 			cCS = [9, 11, 13][size], //characterCountSize
 			ACC = DD.ACC;
 		let t = '',
-			l = strm.readBits(cCS);
+			l = strm.r(cCS);
 		while (l >= 2) {
-			const v = strm.readBits(11),
-				a = W.MF(v / 45),
+			const v = strm.r(11),
+				a = Math.floor(v / 45),
 				b = v % 45;
 			b.push(ACC[a].charCodeAt(0), ACC[b].charCodeAt(0));
 			t += ACC[a] + ACC[b];
 			l -= 2;
 		}
 		if (l === 1) {
-			const a = strm.readBits(6);
+			const a = strm.r(6);
 			b.push(ACC[a].charCodeAt(0));
 			t += ACC[a];
 		}
 		return { bytes: b, text: t };
 	}
-	static decodeByte(strm, size) {
+	static dB(strm, size) {
 		const b = [], //bytes
 			cCS = [8, 16, 16][size]; //characterCountSize
 		let t = '',
-			l = strm.readBits(cCS);
-		for (let i = 0; i < l; i++) b.push(strm.readBits(8));
+			l = strm.r(cCS);
+		for (let i = 0; i < l; i++) b.push(strm.r(8));
 		try {
 			t += decodeURIComponent(b.map((b) => '%' + ('0' + b.toString(16)).substr(-2)).join(''));
 		} catch (e) {
@@ -581,22 +589,22 @@ class DD {
 		}
 		return { bytes: b, text: t };
 	}
-	static decodeKanji(strm, size) {
+	static dK(strm, size) {
 		const b = [], //bytes
 			cCS = [8, 10, 12][size]; //characterCountSize
 		let t = '',
-			l = strm.readBits(cCS);
+			l = strm.r(cCS);
 		for (let i = 0; i < l; i++) {
-			const k = strm.readBits(13);
-			let c = (W.MF(k / 0xc0) << 8) | k % 0xc0;
+			const k = strm.r(13);
+			let c = (Math.floor(k / 0xc0) << 8) | k % 0xc0;
 			c += c < 0x1f00 ? 0x8140 : 0xc140;
 			b.push(c >> 8, c & 0xff);
 			t += String.fromCharCode(shiftJISTable[c]);
 		}
 		return { bytes: b, text: t };
 	}
-	static decode(data, ver) {
-		const s = new BS(data), //stream
+	static dec(data, ver) {
+		const s = new BS(data), //decode stream
 			size = ver <= 9 ? 0 : ver <= 26 ? 1 : 2, // There are 3 'sizes' based on the version. 1-9 is small (0), 10-26 is medium (1) and 27-40 is large (2).
 			chunks = [],
 			bytes = [],
@@ -609,23 +617,23 @@ class DD {
 			M = DD.Mode,
 			B = DD.ModeByte;
 		while (s.available() >= 4) {
-			const m = s.readBits(4); //mode
+			const m = s.r(4); //mode
 			if (m === B.Terminator) return r;
 			else if (m === B.ECI) {
-				if (s.readBits(1) === 0)
+				if (s.r(1) === 0)
 					chunks.push({
 						type: M.ECI,
-						assignmentNumber: s.readBits(7),
+						assignmentNumber: s.r(7),
 					});
-				else if (s.readBits(1) === 0)
+				else if (s.r(1) === 0)
 					chunks.push({
 						type: M.ECI,
-						assignmentNumber: s.readBits(14),
+						assignmentNumber: s.r(14),
 					});
-				else if (s.readBits(1) === 0)
+				else if (s.r(1) === 0)
 					chunks.push({
 						type: M.ECI,
-						assignmentNumber: s.readBits(21),
+						assignmentNumber: s.r(21),
 					});
 				else
 					chunks.push({
@@ -633,34 +641,34 @@ class DD {
 						assignmentNumber: -1,
 					}); // ECI data seems corrupted
 			} else if (m === B.Numeric) {
-				const nr = DD.decodeNumeric(s, size);
+				const nr = DD.dN(s, size);
 				r.text += nr.text;
-				W.concat(bytes, nr.bytes);
+				W.cat(bytes, nr.bytes);
 				chunks.push({
 					type: M.Numeric,
 					text: nr.text,
 				});
 			} else if (m === B.Alphanumeric) {
-				const ar = DD.decodeAlphanumeric(s, size);
+				const ar = DD.dA(s, size);
 				r.text += ar.text;
-				W.concat(bytes, ar.bytes);
+				W.cat(bytes, ar.bytes);
 				chunks.push({
 					type: M.Alphanumeric,
 					text: ar.text,
 				});
 			} else if (m === B.Byte) {
-				const br = DD.decodeByte(s, size);
+				const br = DD.dB(s, size);
 				r.text += br.text;
-				W.concat(bytes, br.bytes);
+				W.cat(bytes, br.bytes);
 				chunks.push({
 					type: M.Byte,
 					bytes: br.bytes,
 					text: br.text,
 				});
 			} else if (m === B.Kanji) {
-				const kr = DD.decodeKanji(s, size);
+				const kr = DD.dK(s, size);
 				r.text += kr.text;
-				W.concat(bytes, kr.bytes);
+				W.cat(bytes, kr.bytes);
 				chunks.push({
 					type: M.Kanji,
 					bytes: kr.bytes,
@@ -668,13 +676,13 @@ class DD {
 				});
 			}
 		}
-		if (s.available() === 0 || s.readBits(s.available()) === 0) return r; // If there is no data left, or the remaining bits are all 0, then that counts as a termination marker
+		if (s.available() === 0 || s.r(s.available()) === 0) return r; // If there is no data left, or the remaining bits are all 0, then that counts as a termination marker
 	}
 }
 /* 5 Decoder*/
 class DC {
-	static numBitsDiffering(x, y) {
-		let z = x ^ y;
+	static n(x, y) {
+		let z = x ^ y; //numBitsDiffering
 		let c = 0; //bitCount
 		while (z) {
 			c++;
@@ -682,7 +690,7 @@ class DC {
 		}
 		return c;
 	}
-	static pushBit = (bit, byte) => (byte << 1) | bit;
+	static p = (bit, byte) => (byte << 1) | bit; //pushBit
 	static FORMAT_INFO_TABLE = [
 		{ bits: 0x5412, formatInfo: { errorCorrectionLevel: 1, dataMask: 0 } },
 		{ bits: 0x5125, formatInfo: { errorCorrectionLevel: 1, dataMask: 1 } },
@@ -722,33 +730,33 @@ class DC {
 		(p) => p.y % 2 === 0,
 		(p) => p.x % 3 === 0,
 		(p) => (p.y + p.x) % 3 === 0,
-		(p) => (W.MF(p.y / 2) + W.MF(p.x / 3)) % 2 === 0,
+		(p) => (Math.floor(p.y / 2) + Math.floor(p.x / 3)) % 2 === 0,
 		(p) => ((p.x * p.y) % 2) + ((p.x * p.y) % 3) === 0,
 		(p) => (((p.y * p.x) % 2) + ((p.y * p.x) % 3)) % 2 === 0,
 		(p) => (((p.y + p.x) % 2) + ((p.y * p.x) % 3)) % 2 === 0,
 	];
-	static buildFunctionPatternMask(v) {
-		const d = 17 + 4 * v.versionNumber, //version //dimension
-			m = BM.createEmpty(d, d); //matrix
-		m.setRegion(0, 0, 9, 9, true); // Top left finder pattern + separator + format
-		m.setRegion(d - 8, 0, 8, 9, true); // Top right finder pattern + separator + format
-		m.setRegion(0, d - 8, 9, 8, true); // Bottom left finder pattern + separator + format
+	static m(v) {
+		const d = 17 + 4 * v.versionNumber, //buildFunctionPatternMask//version //dimension
+			m = BM.c(d, d); //matrix
+		m.sR(0, 0, 9, 9, true); // Top left finder pattern + separator + format
+		m.sR(d - 8, 0, 8, 9, true); // Top right finder pattern + separator + format
+		m.sR(0, d - 8, 9, 8, true); // Bottom left finder pattern + separator + format
 		for (const x of v.alignmentPatternCenters)
 			for (const y of v.alignmentPatternCenters)
 				if (!((x === 6 && y === 6) || (x === 6 && y === d - 7) || (x === d - 7 && y === 6)))
-					m.setRegion(x - 2, y - 2, 5, 5, true); // Alignment patterns
-		m.setRegion(6, 9, 1, d - 17, true); // Vertical timing pattern
-		m.setRegion(9, 6, d - 17, 1, true); // Horizontal timing pattern
+					m.sR(x - 2, y - 2, 5, 5, true); // Alignment patterns
+		m.sR(6, 9, 1, d - 17, true); // Vertical timing pattern
+		m.sR(9, 6, d - 17, 1, true); // Horizontal timing pattern
 		if (v.versionNumber > 6) {
-			m.setRegion(d - 11, 0, 3, 6, true); // Version info, top right
-			m.setRegion(0, d - 11, 6, 3, true); // Version info, bottom left
+			m.sR(d - 11, 0, 3, 6, true); // Version info, top right
+			m.sR(0, d - 11, 6, 3, true); // Version info, bottom left
 		}
 		return m;
 	}
-	static readCodewords(mtx, ver, formatInfo) {
-		const M = DC.DATA_MASKS[formatInfo.dataMask],
+	static c(mtx, ver, formatInfo) {
+		const M = DC.DATA_MASKS[formatInfo.dataMask], //readCodewords
 			d = mtx.height, //dimension
-			fPM = DC.buildFunctionPatternMask(ver), //functionPatternMask
+			fPM = DC.m(ver), //functionPatternMask
 			c = []; //codewords
 		let cb = 0, //currentByte
 			b = 0, //bitsRead
@@ -763,7 +771,7 @@ class DC {
 						b++;
 						let bit = mtx.get(x, y);
 						if (M({ y: y, x: x })) bit = !bit;
-						cb = DC.pushBit(bit, cb);
+						cb = DC.p(bit, cb);
 						if (b === 8) {
 							c.push(cb); // Whole bytes
 							b = 0;
@@ -776,64 +784,64 @@ class DC {
 		}
 		return c;
 	}
-	static readVersion(mtx) {
-		const d = mtx.height, //dimension
-			pV = W.MF((d - 17) / 4); //provisionalVersion
+	static v(mtx) {
+		const d = mtx.height, //readVersion//dimension
+			pV = Math.floor((d - 17) / 4); //provisionalVersion
 		if (pV <= 6) return W.VERSIONS[pV - 1]; // 6 and under dont have version info in the QR code
-		let tRVB = 0, //topRightVersionBits
-			bLVB = 0; //bottomLeftVersionBits
-		for (let y = 5; y >= 0; y--) for (let x = d - 9; x >= d - 11; x--) tRVB = DC.pushBit(mtx.get(x, y), tRVB);
-		for (let x = 5; x >= 0; x--) for (let y = d - 9; y >= d - 11; y--) bLVB = DC.pushBit(mtx.get(x, y), bLVB);
+		let tR = 0, //topRightVersionBits
+			bL = 0; //bottomLeftVersionBits
+		for (let y = 5; y >= 0; y--) for (let x = d - 9; x >= d - 11; x--) tR = DC.p(mtx.get(x, y), tR);
+		for (let x = 5; x >= 0; x--) for (let y = d - 9; y >= d - 11; y--) bL = DC.p(mtx.get(x, y), bL);
 		let bD = Infinity, //bestDifference
-			bV; //bestVersion
+			bV = null; //bestVersion
 		for (const v of W.VERSIONS) {
-			if (v.infoBits === tRVB || v.infoBits === bLVB) return v;
-			const diff = DC.numBitsDiffering(tRVB, v.infoBits);
-			if (diff < bD) {
+			if (v.infoBits === tR || v.infoBits === bL) return v;
+			const d1 = DC.n(tR, v.infoBits),
+				d2 = DC.n(bL, v.infoBits);
+			if (d1 < bD) {
 				bV = v;
-				bD = diff;
+				bD = d1;
 			}
-			const diff2 = DC.numBitsDiffering(bLVB, v.infoBits);
-			if (diff2 < bD) {
+			if (d2 < bD) {
 				bV = v;
-				bD = diff2;
+				bD = d2;
 			}
 		}
 		// We can tolerate up to 3 bits of error since no two version info codewords will
 		// differ in less than 8 bits.
-		if (bD <= 3) return bV;
+		return bD <= 3 ? bV : W.n('readVersion bD:' + bD);
 	}
-	static readFormatInformation(mtx) {
-		let tLFIB = 0, //topLeftFormatInfoBits
-			tRBRFIB = 0; //topRightBottomRightFormatInfoBits
-		for (let x = 0; x <= 8; x++) if (x !== 6) tLFIB = DC.pushBit(mtx.get(x, 8), tLFIB); // Skip timing pattern bit
-		for (let y = 7; y >= 0; y--) if (y !== 6) tLFIB = DC.pushBit(mtx.get(8, y), tLFIB); // Skip timing pattern bit
+	static f(mtx) {
+		let tL = 0, //readFormatInformation//topLeftFormatInfoBits
+			tR = 0; //topRightBottomRightFormatInfoBits
+		for (let x = 0; x <= 8; x++) if (x !== 6) tL = DC.p(mtx.get(x, 8), tL); // Skip timing pattern bit
+		for (let y = 7; y >= 0; y--) if (y !== 6) tL = DC.p(mtx.get(8, y), tL); // Skip timing pattern bit
 		const d = mtx.height; //dimension
-		for (let y = d - 1; y >= d - 7; y--) tRBRFIB = DC.pushBit(mtx.get(8, y), tRBRFIB); // bottom left
-		for (let x = d - 8; x < d; x++) tRBRFIB = DC.pushBit(mtx.get(x, 8), tRBRFIB); // top right
+		for (let y = d - 1; y >= d - 7; y--) tR = DC.p(mtx.get(8, y), tR); // bottom left
+		for (let x = d - 8; x < d; x++) tR = DC.p(mtx.get(x, 8), tR); // top right
 		let bD = Infinity, //bestDifference
 			bFI = null; //bestFormatInfo
 		for (const a of DC.FORMAT_INFO_TABLE) {
 			const b = a.bits, //bits
 				fI = a.formatInfo; //formatInfo
-			if (b === tLFIB || b === tRBRFIB) return fI;
-			const difl = DC.numBitsDiffering(tLFIB, b); //difference1
+			if (b === tL || b === tR) return fI;
+			const difl = DC.n(tL, b); //difference1
 			if (difl < bD) {
 				bFI = fI;
 				bD = difl;
 			}
-			if (tLFIB !== tRBRFIB) {
-				const dif = DC.numBitsDiffering(tRBRFIB, b); //difference// also try the other option
+			if (tL !== tR) {
+				const dif = DC.n(tR, b); //difference// also try the other option
 				if (dif < bD) {
 					bFI = fI;
 					bD = dif;
 				}
 			}
 		}
-		return bD <= 3 ? bFI : null; // Hamming distance of the 32 masked codes is 7, by construction, so <= 3 bits differing means we found a match
+		return bD <= 3 ? bFI : W.n('readFormatInformation bD:' + bD); // Hamming distance of the 32 masked codes is 7, by construction, so <= 3 bits differing means we found a match
 	}
-	static getDataBlocks(codeWs, ver, ecLevel) {
-		const ei = ver.errorCorrectionLevels[ecLevel], //ecInfo
+	static b(codeWs, ver, ecLevel) {
+		const ei = ver.errorCorrectionLevels[ecLevel], //getDataBlocks//ecInfo
 			db = []; //dataBlocks
 		let tc = 0; //totalCodewords
 		for (const b of ei.ecBlocks)
@@ -844,7 +852,7 @@ class DC {
 		// In some cases the QR code will be malformed enough that we pull off more or less than we should.
 		// If we pull off less there's nothing we can do.
 		// If we pull off more we can safely truncate
-		if (codeWs.length < tc) return null;
+		if (codeWs.length < tc) return W.n('getDataBlocks codeWs.length < tc:' + tc + '/codeWs:' + codeWs.length);
 		codeWs = codeWs.slice(0, tc);
 		const s = ei.ecBlocks[0].dataCodewordsPerBlock; //shortBlockSize
 		for (let i = 0; i < s; i++) for (const d of db) d.codewords.push(codeWs.shift()); // Pull codewords to fill the blocks up to the minimum size
@@ -856,32 +864,31 @@ class DC {
 		while (codeWs.length > 0) for (const d of db) d.codewords.push(codeWs.shift()); // Add the rest of the codewords to the blocks. These are the error correction codewords.
 		return db;
 	}
-	static decodeMatrix(mtx) {
-		const v = DC.readVersion(mtx); //version
-		if (!v) return null;
-		const fI = DC.readFormatInformation(mtx); //formatInfo
-		if (!fI) return null;
-		const c = DC.readCodewords(mtx, v, fI), //codewords
-			d = DC.getDataBlocks(c, v, fI.errorCorrectionLevel); //dataBlocks
-		if (!d) return null;
+	static x(mtx) {
+		const v = DC.v(mtx); //decodeMatrix//version
+		if (!v) return W.n('decodeMatrix v', v);
+		const fI = DC.f(mtx); //formatInfo
+		if (!fI) return W.n('decodeMatrix fI', fI);
+		const c = DC.c(mtx, v, fI), //codewords
+			d = DC.b(c, v, fI.errorCorrectionLevel); //dataBlocks
+		if (!d) return W.n('decodeMatrix d', d);
 		const t = d.reduce((a, b) => a + b.numDataCodewords, 0), //totalBytes// Count total number of data bytes
 			r = W.u8ca(t); //resultBytes
 		let ri = 0; //resultIndex
 		for (const b of d) {
 			const cb = RS.decode(b.codewords, b.codewords.length - b.numDataCodewords); //correctedBytes
-			if (!cb) return null;
+			if (!cb) return W.n('decodeMatrix cb', cb);
 			for (let i = 0; i < b.numDataCodewords; i++) r[ri++] = cb[i];
 		}
 		try {
-			return DD.decode(r, v.versionNumber);
+			return DD.dec(r, v.versionNumber);
 		} catch (e) {
-			console.log('decodeMatrix', e);
-			return null;
+			return W.n('decodeMatrix e', e);
 		}
 	}
 	static decode(mtx) {
-		if (mtx == null) return null;
-		const r = DC.decodeMatrix(mtx);
+		if (mtx == null) return W.n('decode mtx:' + mtx);
+		const r = DC.x(mtx);
 		if (r) return r;
 		for (let x = 0; x < mtx.width; x++)
 			for (let y = x + 1; y < mtx.height; y++)
@@ -889,15 +896,15 @@ class DC {
 					mtx.set(x, y, !mtx.get(x, y)); // Decoding didn't work, try mirroring the QR across the topLeft -> bottomRight line.
 					mtx.set(y, x, !mtx.get(y, x));
 				}
-		return DC.decodeMatrix(mtx);
+		return DC.x(mtx);
 	}
 }
 /* 11 Extractor*/
 class EX {
 	static squareToQuadrilateral(p1, p2, p3, p4) {
-		const dx3 = p1.x - p2.x + p3.x - p4.x,
-			dy3 = p1.y - p2.y + p3.y - p4.y;
-		if (dx3 === 0 && dy3 === 0)
+		const x3 = p1.x - p2.x + p3.x - p4.x,
+			y3 = p1.y - p2.y + p3.y - p4.y;
+		if (x3 === 0 && y3 === 0)
 			return {
 				a11: p2.x - p1.x, // Affine
 				a12: p2.y - p1.y,
@@ -910,13 +917,13 @@ class EX {
 				a33: 1,
 			};
 		else {
-			const dx1 = p2.x - p3.x,
-				dx2 = p4.x - p3.x,
-				dy1 = p2.y - p3.y,
-				dy2 = p4.y - p3.y,
-				d = dx1 * dy2 - dx2 * dy1, //denominator
-				a13 = (dx3 * dy2 - dx2 * dy3) / d,
-				a23 = (dx1 * dy3 - dx3 * dy1) / d;
+			const x1 = p2.x - p3.x,
+				x2 = p4.x - p3.x,
+				y1 = p2.y - p3.y,
+				y2 = p4.y - p3.y,
+				d = x1 * y2 - x2 * y1, //denominator
+				a13 = (x3 * y2 - x2 * y3) / d,
+				a23 = (x1 * y3 - x3 * y1) / d;
 			return {
 				a11: p2.x - p1.x + a13 * p2.x,
 				a12: p2.y - p1.y + a13 * p2.y,
@@ -931,17 +938,17 @@ class EX {
 		}
 	}
 	static quadrilateralToSquare(p1, p2, p3, p4) {
-		const sToQ = EX.squareToQuadrilateral(p1, p2, p3, p4); // Here, the adjoint serves as the inverse:
+		const s = EX.squareToQuadrilateral(p1, p2, p3, p4); // Here, the adjoint serves as the inverse:
 		return {
-			a11: sToQ.a22 * sToQ.a33 - sToQ.a23 * sToQ.a32,
-			a12: sToQ.a13 * sToQ.a32 - sToQ.a12 * sToQ.a33,
-			a13: sToQ.a12 * sToQ.a23 - sToQ.a13 * sToQ.a22,
-			a21: sToQ.a23 * sToQ.a31 - sToQ.a21 * sToQ.a33,
-			a22: sToQ.a11 * sToQ.a33 - sToQ.a13 * sToQ.a31,
-			a23: sToQ.a13 * sToQ.a21 - sToQ.a11 * sToQ.a23,
-			a31: sToQ.a21 * sToQ.a32 - sToQ.a22 * sToQ.a31,
-			a32: sToQ.a12 * sToQ.a31 - sToQ.a11 * sToQ.a32,
-			a33: sToQ.a11 * sToQ.a22 - sToQ.a12 * sToQ.a21,
+			a11: s.a22 * s.a33 - s.a23 * s.a32,
+			a12: s.a13 * s.a32 - s.a12 * s.a33,
+			a13: s.a12 * s.a23 - s.a13 * s.a22,
+			a21: s.a23 * s.a31 - s.a21 * s.a33,
+			a22: s.a11 * s.a33 - s.a13 * s.a31,
+			a23: s.a13 * s.a21 - s.a11 * s.a23,
+			a31: s.a21 * s.a32 - s.a22 * s.a31,
+			a32: s.a12 * s.a31 - s.a11 * s.a32,
+			a33: s.a11 * s.a22 - s.a12 * s.a21,
 		};
 	}
 	static times(a, b) {
@@ -958,15 +965,15 @@ class EX {
 		};
 	}
 	static extract(img, loc) {
-		const qToS = EX.quadrilateralToSquare(
+		const q = EX.quadrilateralToSquare(
 				{ x: 3.5, y: 3.5 },
 				{ x: loc.dimension - 3.5, y: 3.5 },
 				{ x: loc.dimension - 6.5, y: loc.dimension - 6.5 },
 				{ x: 3.5, y: loc.dimension - 3.5 }
 			),
-			sToQ = EX.squareToQuadrilateral(loc.topLeft, loc.topRight, loc.alignmentPattern, loc.bottomLeft),
-			t = EX.times(sToQ, qToS), //transform
-			m = BM.createEmpty(loc.dimension, loc.dimension), //matrix
+			s = EX.squareToQuadrilateral(loc.topLeft, loc.topRight, loc.alignmentPattern, loc.bottomLeft),
+			t = EX.times(s, q), //transform
+			m = BM.c(loc.dimension, loc.dimension), //matrix
 			mF = (x, y) => {
 				const d = t.a13 * x + t.a23 * y + t.a33; //mappingFunction//denominator
 				return {
@@ -979,7 +986,7 @@ class EX {
 				const xV = x + 0.5,
 					yV = y + 0.5,
 					sP = mF(xV, yV); //sourcePixel
-				m.set(x, y, img.get(W.MF(sP.x), W.MF(sP.y)));
+				m.set(x, y, img.get(Math.floor(sP.x), Math.floor(sP.y)));
 			}
 		return {
 			matrix: m,
@@ -1023,31 +1030,32 @@ class LC {
 		if (mS < 1) W.e('Invalid module size');
 		const tD = Math.round(LC.distance(topLeft, topRight) / mS), //topDimension
 			sD = Math.round(LC.distance(topLeft, bottomLeft) / mS), //sideDimension
-			d = W.MF((tD + sD) / 2) + 7; //dimension
-		return { dimension: d + (!d % 4 ? 1 : d % 4 === 2 ? -1 : 0), moduleSize: mS };
+			d = Math.floor((tD + sD) / 2) + 7; //dimension
+		return { dimension: d + (!(d % 4) ? 1 : d % 4 === 2 ? -1 : 0), moduleSize: mS };
 	}
 	// Takes an origin point and an end point and counts the sizes of the black white run from the origin towards the end point.
 	// Returns an array of elements, representing the pixel size of the black white run.
 	// Uses a variant of http://en.wikipedia.org/wiki/Bresenham's_line_algorithm
-	static countBlackWhiteRunTowardsPoint(origin, end, mtx, len) {
-		const sps = [{ x: Math.floor(origin.x), y: Math.floor(origin.y) }], //switchPoints
-			steep = Math.abs(end.y - origin.y) > Math.abs(end.x - origin.x),
-			fromX = Math.floor(steep ? origin.y : origin.x),
-			fromY = Math.floor(steep ? origin.x : origin.y),
-			toX = Math.floor(steep ? end.y : end.x),
-			toY = Math.floor(steep ? end.x : end.y),
-			dx = Math.abs(toX - fromX),
-			dy = Math.abs(toY - fromY),
-			xStep = fromX < toX ? 1 : -1,
-			yStep = fromY < toY ? 1 : -1;
-		let e = Math.floor(-dx / 2), //error
+	static countBlackWhiteRunTowardsPoint(org, end, mtx, len) {
+		const M = Math,
+			sps = [{ x: M.floor(org.x), y: M.floor(org.y) }], //switchPoints
+			st = M.abs(end.y - org.y) > M.abs(end.x - org.x), //steep
+			fX = M.floor(st ? org.y : org.x),
+			fY = M.floor(st ? org.x : org.y),
+			tX = M.floor(st ? end.y : end.x),
+			tY = M.floor(st ? end.x : end.y),
+			dx = M.abs(tX - fX),
+			dy = M.abs(tY - fY),
+			xS = fX < tX ? 1 : -1,
+			yS = fY < tY ? 1 : -1;
+		let e = M.floor(-dx / 2), //error
 			cP = true; //currentPixel // Loop up until x == toX, but not beyond
-		for (let x = fromX, y = fromY; x !== toX + xStep; x += xStep) {
+		for (let x = fX, y = fY; x !== tX + xS; x += xS) {
 			// Does current pixel mean we have moved white to black or vice versa?
 			// Scanning black in state 0,2 and white in state 1, so if we find the wrong
 			// color, advance to next state or end if we are in state 2 already
-			const rX = steep ? y : x;
-			const rY = steep ? x : y;
+			const rX = st ? y : x;
+			const rY = st ? x : y;
 			if (mtx.get(rX, rY) !== cP) {
 				cP = !cP;
 				sps.push({ x: rX, y: rY });
@@ -1055,8 +1063,8 @@ class LC {
 			}
 			e += dy;
 			if (e > 0) {
-				if (y === toY) break;
-				y += yStep;
+				if (y === tY) break;
+				y += yS;
 				e -= dx;
 			}
 		}
@@ -1098,29 +1106,28 @@ class LC {
 		try {
 			const hR = LC.countBlackWhiteRun(p, { x: -1, y: p.y }, mtx, ratios.length), //horizontalRun
 				vR = LC.countBlackWhiteRun(p, { x: p.x, y: -1 }, mtx, ratios.length), //verticalRun
+				M = Math,
 				tLP = {
-					x: Math.max(0, p.x - p.y) - 1,
-					y: Math.max(0, p.y - p.x) - 1,
+					x: M.max(0, p.x - p.y) - 1,
+					y: M.max(0, p.y - p.x) - 1,
 				}, //topLeftPoint
-				tLBRR = LC.countBlackWhiteRun(p, tLP, mtx, ratios.length), //topLeftBottomRightRun
+				tL = LC.countBlackWhiteRun(p, tLP, mtx, ratios.length), //topLeftBottomRightRun
 				bLR = {
-					x: Math.min(mtx.width, p.x + p.y) + 1,
-					y: Math.min(mtx.height, p.y + p.x) + 1,
+					x: M.min(mtx.width, p.x + p.y) + 1,
+					y: M.min(mtx.height, p.y + p.x) + 1,
 				}, //bottomLeftPoint
-				bLTRR = LC.countBlackWhiteRun(p, bLR, mtx, ratios.length), //bottomLeftTopRightRun
+				bL = LC.countBlackWhiteRun(p, bLR, mtx, ratios.length), //bottomLeftTopRightRun
 				hE = LC.scoreBlackWhiteRun(hR, ratios), //horzError
 				vE = LC.scoreBlackWhiteRun(vR, ratios), //vertError
-				dDE = LC.scoreBlackWhiteRun(tLBRR, ratios), //diagDownError
-				dUE = LC.scoreBlackWhiteRun(bLTRR, ratios), //diagUpError
-				rE = Math.sqrt(
-					hE.error * hE.error + vE.error * vE.error + dDE.error * dDE.error + dUE.error * dUE.error
-				), //ratioError
-				aS = (hE.averageSize + vE.averageSize + dDE.averageSize + dUE.averageSize) / 4, //avgSize
+				dD = LC.scoreBlackWhiteRun(tL, ratios), //diagDownError
+				dU = LC.scoreBlackWhiteRun(bL, ratios), //diagUpError
+				rE = M.sqrt(hE.error * hE.error + vE.error * vE.error + dD.error * dD.error + dU.error * dU.error), //ratioError
+				aS = (hE.averageSize + vE.averageSize + dD.averageSize + dU.averageSize) / 4, //avgSize
 				sE =
-					(Math.pow(hE.averageSize - aS, 2) +
-						Math.pow(vE.averageSize - aS, 2) +
-						Math.pow(dDE.averageSize - aS, 2) +
-						Math.pow(dUE.averageSize - aS, 2)) /
+					(M.pow(hE.averageSize - aS, 2) +
+						M.pow(vE.averageSize - aS, 2) +
+						M.pow(dD.averageSize - aS, 2) +
+						M.pow(dU.averageSize - aS, 2)) /
 					aS; //sizeError
 			return rE + sE;
 		} catch (e) {
@@ -1129,16 +1136,17 @@ class LC {
 		}
 	}
 	static recenterLocation(mtx, p) {
-		let leftX = Math.round(p.x);
-		while (mtx.get(leftX, Math.round(p.y))) leftX--;
-		let rightX = Math.round(p.x);
-		while (mtx.get(rightX, Math.round(p.y))) rightX++;
-		const x = (leftX + rightX) / 2;
-		let topY = Math.round(p.y);
-		while (mtx.get(Math.round(x), topY)) topY--;
-		let bottomY = Math.round(p.y);
-		while (mtx.get(Math.round(x), bottomY)) bottomY++;
-		const y = (topY + bottomY) / 2;
+		const M = Math;
+		let lX = M.round(p.x);
+		while (mtx.get(lX, M.round(p.y))) lX--;
+		let rX = M.round(p.x);
+		while (mtx.get(rX, M.round(p.y))) rX++;
+		const x = (lX + rX) / 2;
+		let tY = M.round(p.y);
+		while (mtx.get(M.round(x), tY)) tY--;
+		let bY = M.round(p.y);
+		while (mtx.get(M.round(x), bY)) bY++;
+		const y = (tY + bY) / 2;
 		return { x, y };
 	}
 	static locate(mtx) {
@@ -1146,11 +1154,12 @@ class LC {
 			aAPQ = []; //activeAlignmentPatternQuads
 		const fPQ = [], //finderPatternQuads
 			aPQ = [], //alignmentPatternQuads
-			_loop_1 = (y) => {
+			M = Math,
+			l1 = (y) => {
 				let l1 = 0, //length_1
 					lb = false, //lastBit
 					ss = [0, 0, 0, 0, 0], //scans
-					_loop_2 = (x) => {
+					l2 = (x) => {
 						const v = mtx.get(x, y);
 						if (v === lb) l1++;
 						else {
@@ -1160,18 +1169,18 @@ class LC {
 							// Do the last 5 color changes ~ match the expected ratio for a finder pattern? 1:1:3:1:1 of b:w:b:w:b
 							const aFPB = LC.sum(ss) / 7, //averageFinderPatternBlocksize
 								vFP = //validFinderPattern
-									Math.abs(ss[0] - aFPB) < aFPB &&
-									Math.abs(ss[1] - aFPB) < aFPB &&
-									Math.abs(ss[2] - 3 * aFPB) < 3 * aFPB &&
-									Math.abs(ss[3] - aFPB) < aFPB &&
-									Math.abs(ss[4] - aFPB) < aFPB &&
+									M.abs(ss[0] - aFPB) < aFPB &&
+									M.abs(ss[1] - aFPB) < aFPB &&
+									M.abs(ss[2] - 3 * aFPB) < 3 * aFPB &&
+									M.abs(ss[3] - aFPB) < aFPB &&
+									M.abs(ss[4] - aFPB) < aFPB &&
 									!v, // And make sure the current pixel is white since finder patterns are bordered in white
 								// Do the last 3 color changes ~ match the expected ratio for an alignment pattern? 1:1:1 of w:b:w
 								aAPB = LC.sum(ss.slice(-3)) / 3, //averageAlignmentPatternBlocksize
 								vAP = //validAlignmentPattern
-									Math.abs(ss[2] - aAPB) < aAPB &&
-									Math.abs(ss[3] - aAPB) < aAPB &&
-									Math.abs(ss[4] - aAPB) < aAPB &&
+									M.abs(ss[2] - aAPB) < aAPB &&
+									M.abs(ss[3] - aAPB) < aAPB &&
+									M.abs(ss[4] - aAPB) < aAPB &&
 									v; // Is the current pixel black since alignment patterns are bordered in black
 							if (vFP) {
 								// Compute the start and end x values of the large center black square
@@ -1212,33 +1221,33 @@ class LC {
 							}
 						}
 					};
-				for (let x = -1; x <= mtx.width; x++) _loop_2(x);
-				W.concat(
+				for (let x = -1; x <= mtx.width; x++) l2(x);
+				W.cat(
 					fPQ,
 					aFPQ.filter((q) => q.bottom.y !== y && q.bottom.y - q.top.y >= 2)
 				);
 				aFPQ = aFPQ.filter((q) => q.bottom.y === y);
-				W.concat(
+				W.cat(
 					aPQ,
 					aAPQ.filter((q) => q.bottom.y !== y)
 				);
 				aAPQ = aAPQ.filter((q) => q.bottom.y === y);
 			};
-		for (let y = 0; y <= mtx.height; y++) _loop_1(y);
-		W.concat(
+		for (let y = 0; y <= mtx.height; y++) l1(y);
+		W.cat(
 			fPQ,
 			aFPQ.filter((q) => q.bottom.y - q.top.y >= 2)
 		);
-		W.concat(aPQ, aAPQ);
+		W.cat(aPQ, aAPQ);
 		const fPG = fPQ //finderPatternGroups
 			.filter((q) => q.bottom.y - q.top.y >= 2) // All quads must be at least 2px tall since the center square is larger than a block
 			.map((q) => {
 				const x = (q.top.startX + q.top.endX + q.bottom.startX + q.bottom.endX) / 4,
 					y = (q.top.y + q.bottom.y + 1) / 2;
-				if (!mtx.get(Math.round(x), Math.round(y))) return;
+				if (!mtx.get(M.round(x), M.round(y))) return;
 				const l = [q.top.endX - q.top.startX, q.bottom.endX - q.bottom.startX, q.bottom.y - q.top.y + 1], //lengths
 					size = LC.sum(l) / l.length,
-					score = LC.scorePattern({ x: Math.round(x), y: Math.round(y) }, [1, 1, 3, 1, 1], mtx);
+					score = LC.scorePattern({ x: M.round(x), y: M.round(y) }, [1, 1, 3, 1, 1], mtx);
 				return { score, x, y, size };
 			})
 			.filter((q) => !!q) // Filter out any rejected quads from above
@@ -1251,7 +1260,7 @@ class LC {
 						return {
 							x: p.x,
 							y: p.y,
-							score: p.score + Math.pow(p.size - point.size, 2) / point.size,
+							score: p.score + M.pow(p.size - point.size, 2) / point.size,
 							size: p.size,
 						};
 					})
@@ -1307,8 +1316,7 @@ class LC {
 			d = i.dimension;
 			m = i.moduleSize;
 		} catch (e) {
-			console.log('findAlignmentPattern e:', e);
-			return null;
+			return W.n('findAlignmentPattern e:', e);
 		}
 		const bRFP = {
 				x: topRight.x - topLeft.x + bottomLeft.x, // Now find the alignment pattern
@@ -1323,9 +1331,10 @@ class LC {
 		let aps = alignmentPatternQuads
 			.map((q) => {
 				const x = (q.top.startX + q.top.endX + q.bottom.startX + q.bottom.endX) / 4,
-					y = (q.top.y + q.bottom.y + 1) / 2;
-				if (!mtx.get(Math.floor(x), Math.floor(y))) return;
-				const ss = LC.scorePattern({ x: Math.floor(x), y: Math.floor(y) }, [1, 1, 1], mtx); //sizeScore
+					y = (q.top.y + q.bottom.y + 1) / 2,
+					M = Math;
+				if (!mtx.get(M.floor(x), M.floor(y))) return;
+				const ss = LC.scorePattern({ x: M.floor(x), y: M.floor(y) }, [1, 1, 1], mtx); //sizeScore
 				return { x, y, score: ss + LC.distance({ x: x, y: y }, eAP) };
 			})
 			.filter((v) => !!v)
@@ -1337,23 +1346,23 @@ class LC {
 }
 /* 3 */
 class JsQR {
-	static scan(mtx) {
-		const ls = LC.locate(mtx); //locations
-		if (!ls) return null;
+	static s(mtx) {
+		const ls = LC.locate(mtx); //scan//locations
+		if (!ls) return W.n('scan A ls:' + ls);
 		for (const l of ls) {
-			const extd = EX.extract(mtx, l), //extracted
-				dcdd = DC.decode(extd.matrix); //decoded
-			if (dcdd)
+			const ex = EX.extract(mtx, l), //extracted
+				dc = DC.decode(ex.matrix); //decoded
+			if (dc)
 				return {
-					binaryData: dcdd.bytes,
-					data: dcdd.text,
-					chunks: dcdd.chunks,
-					version: dcdd.version,
+					binaryData: dc.bytes,
+					data: dc.text,
+					chunks: dc.chunks,
+					version: dc.version,
 					location: {
-						topRightCorner: extd.mappingFunction(l.dimension, 0),
-						topLeftCorner: extd.mappingFunction(0, 0),
-						bottomRightCorner: extd.mappingFunction(l.dimension, l.dimension),
-						bottomLeftCorner: extd.mappingFunction(0, l.dimension),
+						topRightCorner: ex.mappingFunction(l.dimension, 0),
+						topLeftCorner: ex.mappingFunction(0, 0),
+						bottomRightCorner: ex.mappingFunction(l.dimension, l.dimension),
+						bottomLeftCorner: ex.mappingFunction(0, l.dimension),
 						topRightFinderPattern: l.topRight,
 						topLeftFinderPattern: l.topLeft,
 						bottomLeftFinderPattern: l.bottomLeft,
@@ -1361,7 +1370,7 @@ class JsQR {
 					},
 				};
 		}
-		return null;
+		return W.n('scan B ls:' + ls);
 	}
 	static async exec(data, width, height, providedOptions = {}) {
 		await W.init();
@@ -1372,9 +1381,9 @@ class JsQR {
 		const shouldInvert = opts.inversionAttempts === 'attemptBoth' || opts.inversionAttempts === 'invertFirst';
 		const tryInvertedFirst = opts.inversionAttempts === 'onlyInvert' || opts.inversionAttempts === 'invertFirst';
 		const i = BZ.binarize(data, width, height, shouldInvert);
-		let r = JsQR.scan(tryInvertedFirst ? i.inverted : i.binarized);
+		let r = JsQR.s(tryInvertedFirst ? i.inverted : i.binarized);
 		return !r && (opts.inversionAttempts === 'attemptBoth' || opts.inversionAttempts === 'invertFirst')
-			? JsQR.scan(tryInvertedFirst ? i.binarized : i.inverted)
+			? JsQR.s(tryInvertedFirst ? i.binarized : i.inverted)
 			: r;
 	}
 }
