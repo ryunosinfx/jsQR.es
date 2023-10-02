@@ -175,14 +175,24 @@ export class Test {
 	static baseElm = document.createElement('div');
 	static async exec(elm) {
 		const results = [];
-		for (let i = 0; i < 10; i++) {
+		let c = 0;
+		for (let i = 0; i < 2; ) {
 			const seed = i + '/' + Date.now() + Math.random() * Date.now();
 			const text = await Hasher.digest(seed, 'SHA-512');
-			results.push(await Test.check(elm, text));
+			const result = await Test.check(elm, text);
+			c++;
+			if (result === true) {
+				continue;
+			}
+
+			i++;
+			results.push(result);
 		}
+		console.log('=========================c:' + c);
 		return results;
 	}
 	static a2S(a) {
+		if (!a) return '';
 		const l = a.length;
 		const u8a = new Uint8Array(l);
 		for (let i = 0; i < l; i++) {
@@ -211,6 +221,16 @@ export class Test {
 		const offsetH = Math.floor((Math.random() * s) / 2);
 		x2.putImageData(d, offsetW, offsetH);
 		const d3 = x2.getImageData(0, 0, s2, s2);
+		const result = await jsQR(d3.data, s2, s2);
+		const bd = result ? result.binaryData : result;
+		const t = bd ? Test.a2S(bd) : null;
+		const isOK = text === t;
+		if (isOK) {
+			while (be.firstChild) {
+				be.removeChild(be.firstChild);
+			}
+			return true;
+		}
 		const dURI = c2.toDataURL('image/png');
 		const i = document.createElement('img');
 		const f = document.createElement('div');
@@ -229,14 +249,10 @@ export class Test {
 		elm.appendChild(g);
 		i.src = dURI;
 		j.textContent = dURI;
-		const result = await jsQR(d3.data, s2, s2);
 		while (be.firstChild) {
 			be.removeChild(be.firstChild);
 		}
 		console.log(result);
-		const bd = result ? result.binaryData : result;
-		const t = bd ? Test.a2S(bd) : null;
-		const isOK = text === t;
 		g.classList.add(isOK ? 'OK' : 'NG');
 		h.textContent = isOK ? 'OK' : 'NG ' + result;
 		h.setAttribute('id', text);
@@ -246,6 +262,11 @@ export class Test {
 			result
 		);
 		return { text, data: d3.data, s: s2, isOK, dURI };
+	}
+	static copy(dURI) {
+		return () => {
+			navigator.clipboard.writeText(dURI).then(() => alert('COPYED!'));
+		};
 	}
 	static getRerunFunc(jsRQorigin, dURI, origin) {
 		return () => {
@@ -269,7 +290,7 @@ export class Test {
 					const bdo = ro ? ro.binaryData : ro;
 					const to = bdo ? Test.a2S(bdo) : null;
 
-					console.log(te === to ? 'OK' : 'NG');
+					console.log(to && te === to ? 'OK' : 'NG');
 					console.log(te, to, origin);
 					resolve({ te, to });
 				};

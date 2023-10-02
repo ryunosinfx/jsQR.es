@@ -78,6 +78,10 @@
                         btn.textContent = "rerun";
                         btn.addEventListener("click", Test.getRerunFunc(jsQR, d.dURI, d.text))
                         parent.appendChild(btn)
+                        const cbtn = document.createElement("button");
+                        cbtn.textContent = "copy";
+                        cbtn.addEventListener("click", Test.copy(d.dURI))
+                        parent.appendChild(cbtn)
                     }
                     const child = document.createElement("div")
                     elm.appendChild(child)
@@ -86,7 +90,7 @@
                     const btn = document.createElement("button");
                     btn.textContent = "rerun";
                     child.appendChild(btn)
-                    btn.addEventListener("click", () => { alert("aaa"); Test.getRerunFunc(jsQR, ta.value)() })
+                    btn.addEventListener("click", () => { Test.getRerunFunc(jsQR, ta.value)() })
                 }
                 a();
             </script>
