@@ -173,13 +173,14 @@ class Hasher {
 export class Test {
 	static canvas = document.createElement('canvas');
 	static baseElm = document.createElement('div');
-	static async exec(elm) {
+	static MAX_CHALLENG_COUNT = 1000;
+	static async exec(elm, jsRQorigin) {
 		const results = [];
 		let c = 0;
 		for (let i = 0; i < 2; ) {
 			const seed = i + '/' + Date.now() + Math.random() * Date.now();
 			const text = await Hasher.digest(seed, 'SHA-512');
-			const result = await Test.check(elm, text);
+			const result = await Test.check(elm, text, jsRQorigin, c);
 			c++;
 			if (result === true) {
 				continue;
@@ -188,7 +189,7 @@ export class Test {
 			i++;
 			results.push(result);
 		}
-		console.log('=========================c:' + c);
+		console.log('=========================Challeng Count:' + c);
 		return results;
 	}
 	static a2S(a) {
@@ -200,7 +201,7 @@ export class Test {
 		}
 		return B64U.u8aToString(u8a);
 	}
-	static async check(elm, text, s = Math.floor(Math.random() * 100) + 150) {
+	static async check(elm, text, jsRQorigin, count, s = Math.floor(Math.random() * 100) + 150) {
 		const be = Test.baseElm;
 		new CanvasQRCode(be, text, s, s);
 		const c = be.firstChild;
@@ -225,7 +226,10 @@ export class Test {
 		const bd = result ? result.binaryData : result;
 		const t = bd ? Test.a2S(bd) : null;
 		const isOK = text === t;
-		if (isOK) {
+		const ro = jsRQorigin(d3.data, s2, s2);
+		const bo = ro ? ro.binaryData : ro;
+		const to = bo ? Test.a2S(bo) : null;
+		if ((isOK || to === t) && count < Test.MAX_CHALLENG_COUNT) {
 			while (be.firstChild) {
 				be.removeChild(be.firstChild);
 			}

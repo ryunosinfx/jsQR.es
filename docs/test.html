@@ -61,7 +61,7 @@
                 const qr = document.getElementById("qr");
                 new CanvasQRCode(qr);
                 const a = async () => {
-                    const tested = await Test.exec(document.getElementById("qr2"));
+                    const tested = await Test.exec(document.getElementById("qr2"), jsQR);
                     const r = []
                     const elm = document.getElementById("r");
                     for (const d of tested) {
