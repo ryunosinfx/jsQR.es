@@ -1,3 +1,4 @@
+// import { jsQR } from './jsQR.es.js';
 import { jsQR } from './jsQR.es.min.js';
 // import { jsQR } from './jsQR.js';
 import { CanvasQRCode } from './qrcode.es.js';
