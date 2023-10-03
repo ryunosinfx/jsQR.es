@@ -231,7 +231,7 @@ class V {
 	}
 }
 class F {
-	static async shiftJISTableCompress(shiftJISTable) {
+	static async shiftJISTableCompress(shiftJISTable, elm) {
 		console.log(shiftJISTable);
 		const str = JSON.stringify(shiftJISTable);
 		const rT = JSON.parse(str);
@@ -245,17 +245,26 @@ class F {
 			h
 		);
 		const u8a = F.compress(shiftJISTable);
-		const d = V.compess(u8a);
-		console.log('shiftJISTableCompress STEP 3:' + d.length, d);
+		const dURI = V.compess(u8a);
+		console.log('shiftJISTableCompress STEP 3:' + dURI.length, dURI);
 		const b64 = B64U.ab2B64U(u8a.buffer);
 		console.log('shiftJISTableCompress STEP 4:' + b64.length + ' / ' + b64, u8a);
-		const u8aa = await V.decompress(d);
+		const u8aa = await V.decompress(dURI);
 		const b64a = B64U.ab2B64U(u8aa.buffer);
 		console.log('shiftJISTableCompress STEP 5:' + b64a.length + ' / ' + b64a, u8aa);
 		console.log('shiftJISTableCompress STEP 6:' + b64 === b64a);
 		const m = F.decompress(u8aa);
 		const h2 = await Hasher.digest(JSON.stringify(m));
 		console.log(`STEP 7:${Object.keys(m).length}/${str.length}/${U.isDeepEqual(shiftJISTable, m)}`, h2);
+		if (elm) {
+			const t = document.createElement('div');
+			t.textContent = 'shiftJISTableCompress as PNG DataScheme URI';
+			const d = document.createElement('div');
+			d.textContent = dURI;
+			d.classList = 'duri';
+			elm.appendChild(t);
+			elm.appendChild(d);
+		}
 	}
 	static compress(t) {
 		const k = Object.keys(t);
@@ -279,7 +288,7 @@ class F {
 		for (let c = 0; c < l; c += 4) m[((u8a[c + 0] << 8) | u8a[c + 1]) + ''] = (u8a[c + 2] << 8) | u8a[c + 3];
 		return m;
 	}
-	static async VersionCompress(Version) {
+	static async VersionCompress(Version, elm) {
 		const keys = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 		const keyMap = {};
 		const str = JSON.stringify(Version);
@@ -305,6 +314,19 @@ class F {
 		console.log('VersionCompress STEP 6:', rtt);
 		const rtj = JSON.stringify(rtt);
 		console.log('VersionCompress STEP 7:' + str.length + '/rtj:' + rtj.length + '/' + (str === rtj), rtt);
+		if (elm) {
+			const t = document.createElement('div');
+			t.textContent = 'Version as JSON';
+			const d = document.createElement('div');
+			d.textContent = rjq;
+			const v = document.createElement('div');
+			v.textContent = JSON.stringify(vMap);
+			d.classList = 'text';
+			v.classList = 'text';
+			elm.appendChild(t);
+			elm.appendChild(d);
+			elm.appendChild(v);
+		}
 	}
 	static vc(obj, km, keys) {
 		if (Array.isArray(obj)) for (const r of obj) F.vc(r, km, keys);
@@ -359,7 +381,7 @@ class F {
 		}
 	}
 }
-(function () {
+(function (elm) {
 	const shiftJISTable = {
 		0x20: 0x0020,
 		0x21: 0x0021,
@@ -8705,6 +8727,6 @@ class F {
 			],
 		},
 	];
-	F.shiftJISTableCompress(shiftJISTable);
-	F.VersionCompress(VERSIONS);
-})();
+	F.shiftJISTableCompress(shiftJISTable, elm);
+	F.VersionCompress(VERSIONS, elm);
+})(document.getElementById('result'));
