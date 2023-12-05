@@ -1,9 +1,12 @@
 {
-  "name": "jsqr",
+  "name": "jsqr.es",
   "version": "1.4.0",
-  "description": "A pure javascript QR code reading library that takes in raw images and will locate, extract and parse any QR code found within.",
-  "repository": "https://github.com/cozmo/jsQR",
-  "main": "./dist/jsQR.js",
+  "description": "A pure javascript QR code reading library that takes in raw images and will locate, extract and parse any QR code found within. forked form https://github.com/cozmo/jsQR",
+  "repository": "https://github.com/ryunosinfx/jsQR.es",
+	"keywords": [
+		"qrcode scanner esmodule"
+	],
+  "main": "./doc/jsQR.es.min.nosjis.js",
   "types": "./dist/index.d.ts",
   "contributors": [
     {
@@ -13,6 +16,10 @@
     {
       "name": "Jefff Nelson",
       "email": "gmjefff@gmail.com"
+    },
+    {
+      "name": "ryunosinfx",
+      "email": "ryunosinfxxul@gmail.com"
     }
   ],
   "license": "Apache-2.0",
